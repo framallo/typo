@@ -1,0 +1,3 @@
+[submodule "themes/tangosource"]
+	path = themes/tangosource
+	url = git@tangosource.com:ts-typo-theme.git
