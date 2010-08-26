@@ -1,4 +1,5 @@
   # AccessControl, permit to manage, backend, and frontend access.
+#
   # It's based on the LipsiaSoft Admin.
   # You can define on the fly, roles access, for example:
   # 
@@ -40,15 +41,35 @@
   # An account have two columns, role, that is a string, and project_modules, that is an array (with serialize)
   # 
   # For example, whe can decide that an Account with role :customers can see only, the module project :store.  
+  # 
+
+  # To extend permissions in a plugin and add submenu to project modules you can use map_extension
+  # 
+  # AccessControl.map_extension :require => [ :admin, :publisher, :contributor ] do |map|
+  #  map.permission "admin/plugin_controller"
+  #  map.project_module :write, nil do |project|
+  #    project.submenu "plugin_submenu",          { :controller => "admin/plugin_controller",    :action => "index" }
+  #  end
+  # end
+
 module AccessControl
   class << self
+
     def map(role)
       @mappers ||= []
       @roles ||= []
       mapper = Mapper.new(role)
       yield mapper
+      mapper.include_mapper_extensions(@mapper_extensions) if @mapper_extensions
       @mappers << mapper
       @roles.concat(mapper.roles)
+    end
+
+    def map_extension(role)
+      @mapper_extensions ||= []
+      mapper_extension = Mapper.new(role)
+      yield mapper_extension
+      @mapper_extensions << mapper_extension
     end
     
     def project_modules(role)
@@ -127,8 +148,29 @@ module AccessControl
     def controllers
       return @controllers.uniq.compact
     end
+
+    # this method will merge all mapper extensions that has same project_module
+    # Allowing to extend menus and permissions
+    def include_mapper_extensions(mapper_extensions)
+      mapper_extensions.each do |mapper|
+        include_mapper_extension(mapper) if share_project_modules?(mapper)
+      end
+    end
+
+    def share_project_modules?(mapper)
+      int = mapper.project_modules.collect{|p|p.name} & @project_modules.collect{|p| p.name}
+      int.size > 0
+    end
+
+    def include_mapper_extension(mapper)
+      @roles.concat(mapper.roles)
+      mapper.project_modules.each do |project|
+        pm = @project_modules.find {|e| e.name == project.name}
+        pm ? pm.include_project_module(project) : @project_modules << project
+      end
+    end
   end
-  
+
   class ProjectModule
     attr_reader :name, :menus, :submenus, :controllers
     
@@ -152,6 +194,18 @@ module AccessControl
       @submenus << Menu.new(name, url, options)
     end
     
+    def include_project_module(project_module)
+      if project_module.name== @name 
+        @controllers.concat(project_module.controllers).uniq!
+        
+        # allow to override existing submenus, we delete all with the same name
+        smn = project_module.submenus.collect {|s| s.name} 
+        @submenus.delete_if {|s| smn.include?(s) }
+
+        @submenus.concat(project_module.submenus)
+      end
+    end
+
     def human_name
       return @name.to_s.humanize
     end
