@@ -10,6 +10,7 @@
       <%= @current_version %>
     </p>
 
+
     <% unless @needed_migrations.blank? %>
     <p>
       <strong><%= _("New database version")%>:</strong>
@@ -28,7 +29,7 @@
     <% end %>
 
     <% form_tag :action => 'migrate' do %>
-      <% if @current_version == @needed_version %>
+      <% if @current_version >= @needed_version %>
       <div class='ui-widget ui-widget ui-helper-reset' >
         <div class='ui-state-highlight ui-corner-all' style='padding: 0pt 0.7em;'>
           <p><span class='ui-icon ui-icon-info' style='float: left; margin-right: 0.3em;'></span><strong><%= _("You are up to date!")%></strong></p>
