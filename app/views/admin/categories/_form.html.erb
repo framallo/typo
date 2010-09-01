@@ -2,7 +2,7 @@
 <div>
   <h2><label for="category_parent"><%= _("Parent")%></label> </h2>
   <p class='select_parent'>
-    <%= aac_select(Category.roots, :selected => @category.id, :name=>'category[parent_id]' ) %>
+  <%= aac_select(Category.roots, :selected => @category.id, :option_nil => '', :name=>'category[parent_id]' ) %>
   </p>
 </div>
 <div>
