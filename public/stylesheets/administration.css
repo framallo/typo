@@ -676,3 +676,5 @@ td.paginate {
 #container {
   clear: both;
 }
+
+#aac_sortable_tree_response li {cursor:default}
