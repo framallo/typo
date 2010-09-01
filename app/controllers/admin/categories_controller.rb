@@ -24,11 +24,6 @@ class Admin::CategoriesController < Admin::BaseController
     render :partial=>'order_tree'
   end
 
-  def asort
-    Category.reorder_alpha
-    category_container
-  end
-
   def category_container
     @categories = Category.find(:all, :order => :position)
     render :partial => "categories"

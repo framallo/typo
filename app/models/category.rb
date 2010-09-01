@@ -46,10 +46,6 @@ class Category < ActiveRecord::Base
     end
   end
 
-  def self.reorder_alpha
-    reorder find(:all, :order => 'UPPER(name)').collect { |c| c.id }
-  end
-
   def stripped_name
     self.name.to_url
   end
