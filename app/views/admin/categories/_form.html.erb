@@ -1,5 +1,11 @@
 <%= error_messages_for 'category' %>
 <div>
+  <h2><label for="category_parent"><%= _("Parent")%></label> </h2>
+  <p class='select_parent'>
+    <%= aac_select(Category.roots, :selected => nil, :name=>'category[parent_id]' ) %>
+  </p>
+</div>
+<div>
   <h2><label for="category_name"><%= _("Name")%></label> </h2>
   <p class='input_text_title'>
     <%= text_field :category, :name, :class => 'large title'  %>
