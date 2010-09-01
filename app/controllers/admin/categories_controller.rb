@@ -51,6 +51,7 @@ class Admin::CategoriesController < Admin::BaseController
     @category.attributes = params[:category]
     if request.post?
       save_category
+      return
     end    
     render :action => 'new'
   end
@@ -61,6 +62,7 @@ class Admin::CategoriesController < Admin::BaseController
       redirect_to :action => 'index'
     else
       flash[:error] = _('Category could not be saved.')
+      render :action => 'new'
     end
   end
   
