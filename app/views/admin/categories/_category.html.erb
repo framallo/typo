@@ -1,0 +1,6 @@
+<tr <%= alternate_class -%> id="category_<%= category.id -%>" >
+  <td style="padding-left:<%= category.ancestors_count.to_i*15+ 5 %>px">
+    <%= link_to_edit category.name, category %><br />
+    <%= show_actions category %>
+    </td>
+</tr>  
