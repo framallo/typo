@@ -18,8 +18,10 @@ class Admin::CategoriesController < Admin::BaseController
   end
 
   def order
-    Category.reorder(params[:category_list])
-    render :nothing => true
+    #Category.reorder(params[:category_list])
+    Category.update_positions(params)
+    @categories = Category.find(:all, :order => :position)
+    render :partial=>'order_tree'
   end
 
   def asort
