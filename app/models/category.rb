@@ -82,7 +82,7 @@ class Category < ActiveRecord::Base
 
   def descendants_articles
     cats_ids = descendants_ids.push(id)
-    Article.all(:include=>:categorizations,:conditions=>['categorizations.category_id in (?)',cats_ids] )
+    Article.scoped(:include=>:categorizations,:conditions=>['categorizations.category_id in (?)',cats_ids] )
   end
 
   protected
