@@ -80,6 +80,11 @@ class Category < ActiveRecord::Base
     permalink
   end
 
+  def descendants_articles
+    cats_ids = descendants_ids.push(id)
+    Article.all(:include=>:categorizations,:conditions=>['categorizations.category_id in (?)',cats_ids] )
+  end
+
   protected
 
   before_save :set_defaults

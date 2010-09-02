@@ -51,6 +51,7 @@ class Article < Content
   named_scope :drafts, :conditions => ['state = ?', 'draft']
   named_scope :without_parent, {:conditions => {:parent_id => nil}}
   named_scope :child_of, lambda { |article_id| {:conditions => {:parent_id => article_id}} }
+  named_scope :are_published, {:conditions => {:published => true }}
 
   def has_child?
     Article.exists?({:parent_id => self.id})
