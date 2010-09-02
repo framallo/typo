@@ -3,8 +3,7 @@
     <th><%= _("Title") %></th>
   </tr>
   <%= render_void_table(@categories.size, 2)  %>
-  <%= category_tree(@categories,:matrix=>true) %> 
-  <%#= render :partial => 'category', :collection => @categories %>
+  <%= category_tree(@categories,:matrix=>true, :partial=>'admin/categories/category') %> 
   <tr>
     <td class='paginate'>
       <%= link_to_remote(_('Reorder'), :update => 'category_container', :url => { :action => 'reorder' }) %>

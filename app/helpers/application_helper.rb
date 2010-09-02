@@ -196,4 +196,36 @@ module ApplicationHelper
     html << "</div>"    
   end
   
+  def category_tree(all_categories, options = {})
+    config = {:matrix => false, :url => {}, :update => 'tree_rights_remote', :deactivate_links => false, :partial=>'category'}
+    config.update(options) if options.is_a?(Hash)
+    roots = all_categories.map {|c| c unless c.parent}.compact
+    roots.collect do |root| 
+      if block_given?
+        category_tree_category(root, all_categories, config) {|c| yield c}
+      else
+        category_tree_category(root, all_categories, config) 
+      end # if
+    end # collect
+  end
+  
+  def  category_tree_category(category, all_categories, config)
+    children = all_categories.map {|c| c if c.parent == category}.compact
+    result = '&nbsp;' * category.ancestors_count * 3
+    result += if block_given?
+      yield category
+    else
+      render :partial =>config[:partial], :locals=> {:category => category}
+    end
+    unless children.empty? then
+      children.each do |child| 
+      result += if block_given?
+        category_tree_category(child, all_categories, config) {|c| yield c }
+      else
+        category_tree_category(child, all_categories, config)
+      end # if
+      end
+    end
+    result
+  end
 end
