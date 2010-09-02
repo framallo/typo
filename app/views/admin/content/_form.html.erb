@@ -30,9 +30,11 @@
   <div class='ui-accordion ui-widget ui-helper-reset ui-accordion-icons settings'>
     <h3 class='ui-accordion-header ui-helper-reset ui-state-active ui-corner-top'><span class='ui-icon ui-icon-pencil'> </span><%= _("Categories") %></h3>
     <div class='ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active'>
-      <%- Category.all.each do |cat| %>
-        <%= check_box_tag('categories[]', cat.id, (@article.categories.map(&:id).include? cat.id), :id => "category_#{h(cat.id)}") %>
-        <%= label_tag "category_#{h(cat.id)}", h(cat.name) %><br />
+      <%-  category_tree(Category.all,:matrix=>true) do |cat| %>
+        <div style="padding-left:<%= cat.ancestors_count.to_i*15 %>px" >
+          <%= check_box_tag('categories[]', cat.id, (@article.categories.map(&:id).include? cat.id), :id => "category_#{h(cat.id)}") %>
+          <%= label_tag "category_#{h(cat.id)}", h(cat.name) %><br />
+        </div>
       <% end -%>
     </div>
   </div>
