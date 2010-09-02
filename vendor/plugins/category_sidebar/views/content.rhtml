@@ -1,8 +1,12 @@
-<% unless sidebar.categories.blank? -%>
+<% if !sidebar.categories.blank? && !sidebar.empty.blank? -%>
   <h3><%= _("Categories")%></h3>
   <ul id="categories">
     <% category_tree(Category.all,:matrix=>true) do |category| %> 
-      <li style="padding-left:<%= category.ancestors_count.to_i*15+ 5 %>px" ><%= link_to h(category.name), category_url(category)  %> <% if sidebar.count %><em>(<%= category.descendants_articles.are_published.size %>)</em><% end %></li>
+
+      <% unless category.descendants_articles.are_published == 0 %>
+        <li style="padding-left:<%= category.ancestors_count.to_i*15+ 5 %>px" ><%= link_to h(category.name), category_url(category)  %> <% if sidebar.count %><em>(<%= category.descendants_articles.are_published.size %>)</em><% end %></li>
+      <% end %>
+
     <% end %>
   </ul>
 <% end %>
