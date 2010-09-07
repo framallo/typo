@@ -85,6 +85,10 @@ class Category < ActiveRecord::Base
     Article.scoped(:include=>:categorizations,:conditions=>['categorizations.category_id in (?)',cats_ids] )
   end
 
+  def ancestors_count
+    attributes[:ancestors_count].to_i
+  end
+
   protected
 
   before_save :set_defaults
