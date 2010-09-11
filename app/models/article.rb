@@ -47,7 +47,14 @@ class Article < Content
     
   has_and_belongs_to_many :tags, :foreign_key => 'article_id'
 
+  belongs_to :feed_source
+
+  named_scope :newest, :order => 'updated_at DESC'
+  named_scope :most_popular, :order => 'published_comments_count DESC'
   named_scope :category, lambda {|category_id| {:conditions => ['categorizations.category_id = ?', category_id], :include => 'categorizations'}}
+  named_scope :in_category, lambda {|category_ids| {:conditions => ['categorizations.category_id in (?)', category_ids], :include => 'categorizations'}}
+  named_scope :exclude_category, lambda {|category_ids| {:conditions => ['categorizations.category_id not in (?)', category_ids], :include => 'categorizations'}}
+  named_scope :top, lambda {|n| {:limit=>n.to_i}}
   named_scope :drafts, :conditions => ['state = ?', 'draft']
   named_scope :without_parent, {:conditions => {:parent_id => nil}}
   named_scope :child_of, lambda { |article_id| {:conditions => {:parent_id => article_id}} }

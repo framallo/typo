@@ -6,7 +6,7 @@ class Comment < Feedback
   belongs_to :user
   content_fields :body
   validates_presence_of :author, :body
-
+  
   attr_accessor :user_agent
   attr_accessor :referrer
   attr_accessor :permalink
@@ -43,6 +43,13 @@ class Comment < Feedback
   end
 
   protected
+
+  after_create :update_published_comments_count
+  after_update :update_published_comments_count
+
+  def update_published_comments_count
+    article.update_attribute(:published_comments_count, article.comments.published.size) 
+  end
 
   def article_allows_feedback?
     return true if article.allow_comments?

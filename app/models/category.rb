@@ -81,12 +81,11 @@ class Category < ActiveRecord::Base
   end
 
   def descendants_articles
-    cats_ids = descendants_ids.push(id)
-    Article.scoped(:include=>:categorizations,:conditions=>['categorizations.category_id in (?)',cats_ids] )
+    Article.in_category(descendants_ids_and_self)
   end
 
-  def ancestors_count
-    attributes[:ancestors_count].to_i
+  def descendants_ids_and_self
+    descendants_ids.push(id)
   end
 
   protected

@@ -4,3 +4,6 @@
 [submodule "vendor/plugins/acts_as_category"]
 	path = vendor/plugins/acts_as_category
 	url = http://github.com/funkensturm/acts_as_category.git
+[submodule "vendor/plugins/paperclip"]
+	path = vendor/plugins/paperclip
+	url = http://github.com/thoughtbot/paperclip.git

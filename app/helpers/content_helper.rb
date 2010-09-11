@@ -64,4 +64,7 @@ module ContentHelper
   def render_to_string(*args, &block)
     controller.send(:render_to_string, *args, &block)
   end
+  def short_text(str, length=80)
+    str.length > length ? str.slice(0,length).concat('...') : str
+  end
 end

@@ -2,7 +2,8 @@ class ArticlesController < ContentController
   before_filter :login_required, :only => [:preview]
   before_filter :auto_discovery_feed, :only => [:show, :index]
   before_filter :verify_config
-  
+  before_filter :featured_categories
+  before_filter :most_popular_articles
   layout :theme_layout, :except => [:comment_preview, :trackback]
 
   cache_sweeper :blog_sweeper
@@ -18,19 +19,18 @@ class ArticlesController < ContentController
       format.rss { @limit = this_blog.limit_rss_display }
       format.atom { @limit = this_blog.limit_rss_display }
     end
-    
     unless params[:year].blank?
       @noindex = 1
-      @articles = Article.paginate :page => params[:page], :conditions => { :published_at => time_delta(*params.values_at(:year, :month, :day)), :published => true }, :order => 'published_at DESC', :per_page => @limit
+      @articles = Article.exclude_category(@featured_category).paginate :page => params[:page], :conditions => { :published_at => time_delta(*params.values_at(:year, :month, :day)), :published => true }, :order => 'published_at DESC', :per_page => @limit
     else
       @noindex = 1 unless params[:page].blank?
-      @articles = Article.paginate :page => params[:page], :conditions => ['published = ? AND published_at < ?', true, Time.now], :order => 'published_at DESC', :per_page => @limit
+      @articles = Article.exclude_category(@featured_category).paginate :page => params[:page], :conditions => ['published = ? AND published_at < ?', true, Time.now], :order => 'published_at DESC', :per_page => @limit
     end
     
     @page_title = index_title
     @description = index_description
     @keywords = (this_blog.meta_keywords.empty?) ? "" : this_blog.meta_keywords
-    
+
     respond_to do |format|
       format.html { render_paginated_index }
       format.atom do
@@ -197,6 +197,14 @@ class ArticlesController < ContentController
   end
 
   private
+  def featured_categories
+    @featured_category=Category.find_by_name('Featured')
+    @featured=Article.in_category(@featured_category.descendants_ids_and_self).newest.top(9)
+  end
+
+  def most_popular_articles
+    @most_popular_articles=Article.most_popular.top(6)
+  end
 
   def verify_config
     if  ! this_blog.configured?
