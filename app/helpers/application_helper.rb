@@ -211,7 +211,7 @@ module ApplicationHelper
   
   def  category_tree_category(category, all_categories, config)
     children = all_categories.map {|c| c if c.parent == category}.compact
-    result = '&nbsp;' * category.ancestors_count * 3
+    result = '&nbsp;' * category.ancestors_count.to_i * 3
     result += if block_given?
       yield category
     else
