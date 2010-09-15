@@ -221,7 +221,8 @@ class ArticlesController < ContentController
     @comment      = Comment.new
     @page_title   = @article.title
     article_meta
-    
+    related_articles
+
     auto_discovery_feed
     respond_to do |format|
       format.html { render :template => '/articles/read' }
@@ -231,6 +232,13 @@ class ArticlesController < ContentController
     end
   rescue ActiveRecord::RecordNotFound
     error("Post not found...")
+  end
+
+  def related_articles
+    tags=@article.tags.collect{|c|c.id}
+    @related=Article.in_tag(tags)
+    @related.delete(@article)
+    @related=@related[0,6]
   end
 
   def article_meta

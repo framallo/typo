@@ -53,6 +53,7 @@ class Article < Content
   named_scope :most_popular, :order => 'published_comments_count DESC'
   named_scope :category, lambda {|category_id| {:conditions => ['categorizations.category_id = ?', category_id], :include => 'categorizations'}}
   named_scope :in_category, lambda {|category_ids| {:conditions => ['categorizations.category_id in (?)', category_ids], :include => 'categorizations'}}
+  named_scope :in_tag, lambda {|tag_ids| {:conditions => ['articles_tags.tag_id in (?)', tag_ids], :include => 'tags'}}
   named_scope :exclude_category, lambda {|category_ids| {:conditions => ['categorizations.category_id not in (?)', category_ids], :include => 'categorizations'}}
   named_scope :top, lambda {|n| {:limit=>n.to_i}}
   named_scope :drafts, :conditions => ['state = ?', 'draft']
