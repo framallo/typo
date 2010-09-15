@@ -233,7 +233,7 @@ class ArticlesController < ContentController
   rescue ActiveRecord::RecordNotFound
     error("Post not found...")
   end
-
+ 
   def related_articles
     tags=@article.tags.collect{|c|c.id}
     @related=Article.in_tag(tags)
