@@ -63,7 +63,7 @@ class ArticlesController < ContentController
     @article = Article.last_draft(params[:id])
     render :action => 'read'
   end
-    
+
   def check_password
     return unless request.xhr?
     @article = Article.find(params[:article][:id])
@@ -232,6 +232,13 @@ class ArticlesController < ContentController
     end
   rescue ActiveRecord::RecordNotFound
     error("Post not found...")
+  end
+ 
+  def related_articles
+    tags=@article.tags.collect{|c|c.id}
+    @related=Article.in_tag(tags)
+    @related.delete(@article)
+    @related=@related[0,6]
   end
 
   def related_articles
