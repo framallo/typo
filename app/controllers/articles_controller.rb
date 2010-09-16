@@ -198,7 +198,7 @@ class ArticlesController < ContentController
 
   private
   def featured_categories
-    @featured_category=Category.find_by_name('Featured')
+    @featured_category=Category.find_or_create_by_name('Featured')
     @featured=Article.in_category(@featured_category.descendants_ids_and_self).newest.top(9)
   end
 
