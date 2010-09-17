@@ -38,6 +38,7 @@ ActionController::Routing::Routes.draw do |map|
 
   map.resources :comments, :name_prefix => 'admin_', :collection => [:preview]
   map.resources :trackbacks
+  map.submit '/submit', :controller => 'articles', :action => 'submit'
 
   map.live_search_articles '/live_search/', :controller => "articles", :action => "live_search"
   map.search '/search/:q.:format', :controller => "articles", :action => "search"
