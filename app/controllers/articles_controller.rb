@@ -2,8 +2,6 @@ class ArticlesController < ContentController
   before_filter :login_required, :only => [:preview]
   before_filter :auto_discovery_feed, :only => [:show, :index]
   before_filter :verify_config
-  before_filter :featured_categories
-  before_filter :most_popular_articles
   layout :theme_layout, :except => [:comment_preview, :trackback]
 
   cache_sweeper :blog_sweeper
@@ -197,15 +195,6 @@ class ArticlesController < ContentController
   end
 
   private
-  def featured_categories
-    @featured_category=Category.find_or_create_by_name('Featured')
-    @featured=Article.in_category(@featured_category.descendants_ids_and_self).newest.top(9)
-  end
-
-  def most_popular_articles
-    @most_popular_articles=Article.most_popular.top(6)
-  end
-
   def verify_config
     if  ! this_blog.configured?
       redirect_to :controller => "setup", :action => "index"
