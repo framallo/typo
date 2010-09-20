@@ -19,7 +19,7 @@ class ArticlesController < ContentController
     end
     unless params[:year].blank?
       @noindex = 1
-      @articles = Article.exclude_category(@featured_category).paginate :page => params[:page], :conditions => { :published_at => time_delta(*params.values_at(:year, :month, :day)), :published => true }, :order => 'published_at DESC', :per_page => @limit
+      @articles = Article.paginate :page => params[:page], :conditions => { :published_at => time_delta(*params.values_at(:year, :month, :day)), :published => true }, :order => 'published_at DESC', :per_page => @limit
     else
       @noindex = 1 unless params[:page].blank?
       @articles = Article.paginate :page => params[:page], :conditions => ['published = ? AND published_at < ?', true, Time.now], :order => 'published_at DESC', :per_page => @limit
@@ -42,6 +42,7 @@ class ArticlesController < ContentController
   end
 
   def search
+    @limit = this_blog.limit_article_display 
     @articles = this_blog.articles_matching(params[:q], :page => params[:page], :per_page => @limit)
     return error(_("No posts found..."), :status => 200) if @articles.empty?
     respond_to do |format|

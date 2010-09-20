@@ -53,11 +53,12 @@ class GroupingController < ContentController
       end
     end
 
+    @limit = this_blog.limit_article_display 
     @page_title << " page " << params[:page] if params[:page]
     @description = (@grouping.description.blank?) ? "" : @grouping.description
     @keywords = (@grouping.keywords.blank?) ? "" : @grouping.keywords
     articles = @grouping.respond_to?(:descendants_articles) ? @grouping.descendants_articles : @grouping.articles
-    @articles = articles.paginate(:page => params[:page], :conditions => { :published => true}, :per_page => 10)
+    @articles = articles.paginate(:page => params[:page], :conditions => { :published => true}, :per_page => @limit)
     render_articles
   end
 
