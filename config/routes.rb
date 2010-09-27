@@ -76,12 +76,6 @@ ActionController::Routing::Routes.draw do |map|
   map.with_options(:conditions => {:method => :get}) do |get|
     get.connect 'pages/*name',:controller => 'articles', :action => 'view_page'
 
-    get.with_options(:controller => 'theme', :filename => /.*/, :conditions => {:method => :get}) do |theme|
-      theme.connect 'stylesheets/theme/:filename', :action => 'stylesheets'
-      theme.connect 'javascripts/theme/:filename', :action => 'javascript'
-      theme.connect 'images/theme/:filename',      :action => 'images'
-    end
-
     # For the tests
     get.connect 'theme/static_view_test', :controller => 'theme', :action => 'static_view_test'
 

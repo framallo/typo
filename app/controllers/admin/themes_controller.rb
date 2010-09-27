@@ -21,6 +21,7 @@ class Admin::ThemesController < Admin::BaseController
     this_blog.theme = params[:theme]
     this_blog.save
     zap_theme_caches
+    copy_theme_assets
     this_blog.current_theme(:reload)
     flash[:notice] = _("Theme changed successfully")
     require "#{this_blog.current_theme.path}/helpers/theme_helper.rb" if File.exists? "#{this_blog.current_theme.path}/helpers/theme_helper.rb"
@@ -94,6 +95,15 @@ class Admin::ThemesController < Admin::BaseController
 
   def zap_theme_caches
     FileUtils.rm_rf(%w{stylesheets javascript images}.collect{|v| page_cache_directory + "/#{v}/theme"})
+    FileUtils.rm_rf(%w{stylesheets javascripts images}.collect{|v| File.join(RAILS_ROOT, 'public',v, 'theme')})
+  end
+
+  def copy_theme_assets
+    %w{stylesheets javascripts images}.collect do |v| 
+      puts src = File.join(this_blog.current_theme.path, v)
+      puts dst = File.join(RAILS_ROOT, 'public',v, 'theme')
+      FileUtils.cp_r(src,dst) if File.exists?(src)
+    end
   end
 
   private
