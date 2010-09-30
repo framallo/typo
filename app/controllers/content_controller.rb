@@ -58,7 +58,7 @@ class ContentController < ApplicationController
   end
 
   def most_popular_articles
-    @most_popular_articles=Article.most_popular.top(6)
+    @most_popular_articles=Article.are_published.most_popular.top(6)
   end
 
 end
