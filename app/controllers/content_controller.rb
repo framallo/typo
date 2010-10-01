@@ -53,7 +53,7 @@ class ContentController < ApplicationController
 
   private
   def featured_categories
-    @featured_category=Category.find_or_create_by_name('Auto shows')
+    @featured_category=Category.find_or_create_by_name('Auto Shows')
     @featured=Article.in_category(@featured_category.descendants_ids_and_self).newest.top(9)
   end
 
