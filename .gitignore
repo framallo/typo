@@ -17,3 +17,5 @@ tmp/*
 /coverage/
 nbproject
 public/cache/*
+/vendor/plugins/forms
+/themes/tmroe-theme
