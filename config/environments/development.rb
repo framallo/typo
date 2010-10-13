@@ -19,3 +19,5 @@ def log_to(stream)
 end
 
 config.log_level = :debug
+
+RELOAD_THEME= true

@@ -74,5 +74,13 @@ class ApplicationController < ActionController::Base
     cookies[name] = { :value => value, :path => path || "/#{controller_name}",
                        :expires => 6.weeks.from_now }
   end
+
+  if RELOAD_THEME
+    before_filter :reload_theme
+    def reload_theme
+      this_blog.current_theme.copy_theme_assets
+    end # def
+  end # if
+
 end
 

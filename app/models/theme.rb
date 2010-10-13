@@ -21,6 +21,17 @@ class Theme
     File.read("#{path}/about.markdown") rescue "### #{name}"
   end
 
+  def copy_theme_assets
+    %w{stylesheets javascripts images}.collect do |v| 
+      src = File.join(self.path, v)
+      dst = File.join(RAILS_ROOT, 'public',v, 'theme')
+      if File.exists?(src)
+        FileUtils.rm_r(dst)
+        FileUtils.cp_r(src,dst) 
+      end
+    end
+  end
+
   # Find a theme, given the theme name
   def self.find(name)
     self.new(name,theme_path(name))

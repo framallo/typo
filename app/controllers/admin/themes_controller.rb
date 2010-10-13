@@ -95,15 +95,10 @@ class Admin::ThemesController < Admin::BaseController
 
   def zap_theme_caches
     FileUtils.rm_rf(%w{stylesheets javascript images}.collect{|v| page_cache_directory + "/#{v}/theme"})
-    FileUtils.rm_rf(%w{stylesheets javascripts images}.collect{|v| File.join(RAILS_ROOT, 'public',v, 'theme')})
   end
 
   def copy_theme_assets
-    %w{stylesheets javascripts images}.collect do |v| 
-      puts src = File.join(this_blog.current_theme.path, v)
-      puts dst = File.join(RAILS_ROOT, 'public',v, 'theme')
-      FileUtils.cp_r(src,dst) if File.exists?(src)
-    end
+    this_blog.current_theme.copy_theme_assets
   end
 
   private
