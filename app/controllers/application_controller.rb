@@ -75,7 +75,7 @@ class ApplicationController < ActionController::Base
                        :expires => 6.weeks.from_now }
   end
 
-  if RELOAD_THEME
+  if RAILS_ENV =='development'
     before_filter :reload_theme
     def reload_theme
       this_blog.current_theme.copy_theme_assets

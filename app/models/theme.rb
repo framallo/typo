@@ -26,7 +26,7 @@ class Theme
       src = File.join(self.path, v)
       dst = File.join(RAILS_ROOT, 'public',v, 'theme')
       if File.exists?(src)
-        FileUtils.rm_r(dst)
+        FileUtils.rm_r(dst) if File.exists?(dst)
         FileUtils.cp_r(src,dst) 
       end
     end
