@@ -192,11 +192,11 @@ module ApplicationHelper
   end
 
   def all_css_files
-   RAILS_ENV=='development' ? 'production' : css_files + theme_css_files
+   RAILS_ENV=='production' ? 'production' : css_files + theme_css_files
   end
 
   def all_js_files
-   RAILS_ENV=='development' ? 'production' : js_files + theme_js_files
+   RAILS_ENV=='production' ? 'production' : js_files + theme_js_files
   end
   
 
