@@ -143,7 +143,7 @@ module ApplicationHelper
     javascript_include_tag "lang/#{Localization.lang.to_s}" if File.exists? File.join(RAILS_ROOT, 'public', 'lang', Localization.lang.to_s)    
   end
 
-  def page_header
+  def page_header(skip_js=false)
     page_header_includes = contents.collect { |c| c.whiteboard }.collect do |w|
       w.select {|k,v| k =~ /^page_header_/}.collect do |(k,v)|
         v = v.chomp
@@ -164,8 +164,8 @@ module ApplicationHelper
   <link rel="EditURI" type="application/rsd+xml" title="RSD" href="#{ url_for :controller => '/xml', :action => 'rsd' }" />
   <link rel="alternate" type="application/atom+xml" title="Atom" href="#{ feed_atom }" />
   <link rel="alternate" type="application/rss+xml" title="RSS" href="#{ feed_rss }" />
-  #{ javascript_include_tag 'cookies', 'prototype', 'effects', 'builder', 'typo', :cache => true }
-  #{ stylesheet_link_tag 'coderay', 'user-styles', :cache => true }
+  #{ stylesheet_link_tag all_css_files }
+  #{ include_js_files unless skip_js }
   #{ javascript_include_lang }
   #{ javascript_tag "window._token = '#{form_authenticity_token}'"}
   #{ page_header_includes.join("\n") }
@@ -174,6 +174,31 @@ module ApplicationHelper
     HTML
     ).chomp
   end
+
+  def page_footer
+    include_js_files
+  end
+
+  def include_js_files
+    javascript_include_tag all_js_files
+  end
+
+  def css_files
+    ['coderay', 'user-styles']
+  end
+
+  def js_files
+    ['cookies', 'prototype', 'effects', 'builder', 'typo']
+  end
+
+  def all_css_files
+   RAILS_ENV=='development' ? 'production' : css_files + theme_css_files
+  end
+
+  def all_js_files
+   RAILS_ENV=='development' ? 'production' : js_files + theme_js_files
+  end
+  
 
   def feed_atom
     url_for(:format => :atom, :only_path => false)
