@@ -20,46 +20,13 @@ namespace :assets do
 
   desc 'compress static assets'
   task :compress => :environment do
-    require 'yui/compressor' 
-
-    require 'app/helpers/application_helper'
-    require "#{Blog.default.current_theme.path}/helpers/theme_helper.rb" if File.exists? "#{Blog.default.current_theme.path}/helpers/theme_helper.rb"
-    class AssetHelper
-      extend ThemeHelper
-      extend ApplicationHelper
-    end
-
-    js_file = super_concat '.js', 'javascripts', AssetHelper.all_js_files
-    save_asset 'javascripts/production.js', compress_asset(js_file, :compressor=> YUI::JavaScriptCompressor)
-
-    css_file = super_concat '.css','stylesheets', AssetHelper.all_css_files
-    save_asset 'stylesheets/production.css', compress_asset(css_file, :compressor=> YUI::CssCompressor)
+    TypoAssets.compress
   end
 
-  def super_concat(ext, base_path, files)
-    fs = files.collect {|f| File.join Rails.root, 'public', base_path, f + ext }
-    fs.collect do |f| 
-      if File.exists?(f)
-        file = File.new(f,'r')
-        file.read if file
-      else
-        puts "file missing #{f}" 
-      end
-    end.compact.join("\n")
-  end
-
-  def compress_asset(input, opts)
-    opts[:compressor] ||= YUI::CssCompressor # or YUI::JavaScriptCompressor
-    opts[:compressor_options] ||= {}
-
-    compressor = opts[:compressor].new(opts[:compressor_options])
-    r = compressor.compress(input)
-  end
-
-  def save_asset(filename, content)
-    f = File.join Rails.root, "public", filename
-    puts "Created compressed file #{f}"
-    File.open(f, "w") { |file| file.write(content) }
+  desc 'compress static assets'
+  task :concat => :environment do
+    TypoAssets.concat_js
+    TypoAssets.concat_css
   end
 
 end

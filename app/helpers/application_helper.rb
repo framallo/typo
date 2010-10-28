@@ -164,7 +164,7 @@ module ApplicationHelper
   <link rel="EditURI" type="application/rsd+xml" title="RSD" href="#{ url_for :controller => '/xml', :action => 'rsd' }" />
   <link rel="alternate" type="application/atom+xml" title="Atom" href="#{ feed_atom }" />
   <link rel="alternate" type="application/rss+xml" title="RSS" href="#{ feed_rss }" />
-  #{ stylesheet_link_tag all_css_files }
+  #{ stylesheet_link_tag all_css }
   #{ include_js_files unless skip_js }
   #{ javascript_include_lang }
   #{ javascript_tag "window._token = '#{form_authenticity_token}'"}
@@ -180,25 +180,27 @@ module ApplicationHelper
   end
 
   def include_js_files
-    javascript_include_tag all_js_files
+    javascript_include_tag all_js
   end
 
-  def css_files
-    ['coderay', 'user-styles']
+  TypoAssets.add_css 'coderay', 'user-styles'
+  TypoAssets.add_js 'prototype', 'cookies', 'effects', 'builder', 'typo'
+
+  def all_js
+    if RAILS_ENV=='production' 
+      TypoAssets.js
+    else
+      'production'
+    end
   end
 
-  def js_files
-    ['cookies', 'prototype', 'effects', 'builder', 'typo']
+  def all_css
+    if RAILS_ENV=='production' 
+      TypoAssets.css
+    else
+      'production'
+    end
   end
-
-  def all_css_files
-   RAILS_ENV=='production' ? 'production' : css_files + theme_css_files
-  end
-
-  def all_js_files
-   RAILS_ENV=='production' ? 'production' : js_files + theme_js_files
-  end
-  
 
   def feed_atom
     url_for(:format => :atom, :only_path => false)

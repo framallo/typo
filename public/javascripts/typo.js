@@ -119,7 +119,7 @@ function check_all(checkbox) {
 }
 
 register_onload(function() {
-  if ($('commentform')) {
+  if ($('commentform').size() > 0 ) {
     var _author = getCookie('author');
     var _url = getCookie('url');
 
@@ -132,5 +132,5 @@ register_onload(function() {
     }
   }
 })
-register_onload(function() { if ($('q')) {$('q').setAttribute('autocomplete', 'off');} })
+register_onload(function() { if ($('q')) {$('q').setAttribute('autocomplete', 'off');} });
 
