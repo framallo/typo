@@ -1,4 +1,5 @@
 # The methods added to this helper will be available to all templates in the application.
+#
 require 'digest/sha1'
 
 module ApplicationHelper
@@ -187,19 +188,11 @@ module ApplicationHelper
   TypoAssets.add_js 'prototype', 'cookies', 'effects', 'builder', 'typo'
 
   def all_js
-    if RAILS_ENV=='production' 
-      TypoAssets.js
-    else
-      'production'
-    end
+    RAILS_ENV=='development' ? TypoAssets.js : 'production'
   end
 
   def all_css
-    if RAILS_ENV=='production' 
-      TypoAssets.css
-    else
-      'production'
-    end
+    RAILS_ENV=='development' ?  TypoAssets.css : 'production'
   end
 
   def feed_atom
