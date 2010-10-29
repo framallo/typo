@@ -52,7 +52,7 @@ class TypoAssets
   end
 
   def self.build_production_css(content)
-    save_asset 'javascripts/production.css',content
+    save_asset 'stylesheets/production.css',content
   end
 
   def self.super_concat(ext, base_path, files)
