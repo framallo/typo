@@ -1,4 +1,5 @@
 <% @page_heading = _('Manage articles') %>
+
 <% @link_to_new = link_to(_("New Article"), {:controller => 'content', :action => 'new'}, :id => 'dialog-link', :class => 'ui-state-default ui-corner-all') %>
 
 <% subtabs_for(:content) %>
@@ -11,7 +12,12 @@
   :complete => "Element.hide('spinner')" \
   do %>
 
-<%= render :partial => 'drafts' unless Article.drafts.empty? %>
+<div class='aditional_filters'>
+  <%= label_tag _("Aditional Filters") %> </br>
+  <%= label_tag _("Status") + ':' %> 
+  <%= collection_select_with_current(:search, 'state', Article.valid_states, "to_s", "humanize", @search[:state].to_s, true) %>
+  <input type="submit" value='<%= _("Filter") %>' class='ed_button' />
+</div>
 
 <div class='settings'>
   <h4><label for="search"><%= _("Search articles that contains...")%></label></h4>

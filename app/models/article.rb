@@ -56,6 +56,7 @@ class Article < Content
   named_scope :in_tag, lambda {|tag_ids| {:conditions => ['articles_tags.tag_id in (?)', tag_ids], :include => 'tags'}}
   named_scope :exclude_category, lambda {|category_ids| {:conditions => ['categorizations.category_id not in (?)', category_ids], :include => 'categorizations'}}
   named_scope :top, lambda {|n| {:limit=>n.to_i}}
+  named_scope :state, lambda {|state| {:conditions => "state = '#{state}'"}}
   named_scope :drafts, :conditions => ['state = ?', 'draft']
   named_scope :without_parent, {:conditions => {:parent_id => nil}}
   named_scope :child_of, lambda { |article_id| {:conditions => {:parent_id => article_id}} }
@@ -82,6 +83,9 @@ class Article < Content
                                :after_save, :send_pings, :send_notifications,
                                :published_at=, :just_published?])
 
+  def self.valid_states
+    %w(new draft published withdrawn)
+  end
 
   include Article::States
 
@@ -102,11 +106,15 @@ class Article < Content
       count(:conditions => { :published => true })
     end
 
-    def search_no_draft_paginate(search_hash, paginate_hash)
-      list_function  = ["Article.no_draft"] + function_search_no_draft(search_hash)
+    def search_paginate(search_hash, paginate_hash)
+      list_function  = ["Article"] + function_search_no_draft(search_hash)
 
       if search_hash[:category] and search_hash[:category].to_i > 0
         list_function << 'category(search_hash[:category])'
+      end
+      
+      if search_hash[:state] 
+        list_function << 'state(search_hash[:state])'
       end
 
       paginate_hash[:order] = 'published_at DESC'

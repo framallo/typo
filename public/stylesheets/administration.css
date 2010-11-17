@@ -678,3 +678,18 @@ td.paginate {
 }
 
 #aac_sortable_tree_response li {cursor:default}
+
+.aditional_filters {
+  background: #D7EBF9 repeat-x scroll 50% 50%;
+  border: #AED0EA;
+  float: right;
+  height: 40px;
+  margin-bottom: 20px;
+  padding: 10px;
+  width: 210px;
+  color: #2779AA;
+  font-weight: bold;
+  text-align: left;
+  vertical-align: middle
+}
+
