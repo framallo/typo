@@ -1,0 +1,9 @@
+<% 
+link_id = "toggle_publish_#{article.id}"
+link_class = article.published ? 'published' : 'unpublished'
+%>
+<%= link_to_remote published_or_not(article), 
+      { :update=> link_id , :url =>{ :action =>'toggle_publish', :id => article.id }},
+      :id => link_id, 
+      :class => link_class
+%>

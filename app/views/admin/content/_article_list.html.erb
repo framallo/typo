@@ -9,7 +9,7 @@
   <td><%= author_link(article)%></td>
   <td>
     <%= format_date article.published_at %><br />
-    <%= published_or_not article %>
+    <%= render :partial=>'toggle_publish',:locals=>{:article=>article} %>
   </td>
   <td><%= (article.allow_comments?) ? link_to(article.comments.ham.size.to_s, :controller => '/admin/feedback', :id => article.id, :action => 'article') : '-' %></td>
 </tr>

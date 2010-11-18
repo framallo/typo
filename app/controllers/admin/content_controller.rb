@@ -86,7 +86,6 @@ class Admin::ContentController < Admin::BaseController
 
   def autosave
     get_or_build_article
-
     # This is ugly, but I have to check whether or not the article is
     # published to create the dummy draft I'll replace later so that the
     # published article doesn't get overriden on the front
@@ -120,6 +119,14 @@ class Admin::ContentController < Admin::BaseController
     render :text => nil
   end
 
+  def toggle_publish
+    @article = Article.find(params[:id])
+    @article[:published] = !@article.published
+    @article[:state]     = @article.published ? 'draft' : 'published'
+    @article.save!
+    render :layout=>false, :partial=> 'toggle_publish', :locals=>{:article=>@article}
+  end
+
   protected
 
   attr_accessor :resources, :categories, :resource, :category
@@ -149,7 +156,6 @@ class Admin::ContentController < Admin::BaseController
     @images = Resource.paginate :page => params[:page], :conditions => "mime LIKE '%image%'", :order => 'created_at DESC', :per_page => 10
     @article.keywords = @article.tags.map { |tag| tag.display_name }.sort.join(", ")
     @article.attributes = params[:article]
-
     if request.post?
       set_article_author
       save_attachments
@@ -239,4 +245,5 @@ class Admin::ContentController < Admin::BaseController
   def setup_resources
     @resources = Resource.find(:all, :order => 'created_at DESC')
   end
+
 end
