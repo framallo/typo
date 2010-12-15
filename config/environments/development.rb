@@ -19,3 +19,12 @@ def log_to(stream)
 end
 
 config.log_level = :debug
+
+config.after_initialize do
+  ActiveMerchant::Billing::Base.mode = :test
+  ::GATEWAY = ActiveMerchant::Billing::PaypalGateway.new(
+    :login => "test2_1286904764_biz_api1.gmail.com",
+    :password => "1286904774",
+    :signature => "Ac9X09CO607fxuEoRltSBk0XhxDhAM8CIXWMcB0hXnS3RZ.ZzApHvHM9"
+  )
+end
