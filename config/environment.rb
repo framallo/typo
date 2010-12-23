@@ -50,6 +50,8 @@ Rails::Initializer.run do |config|
   config.gem 'fdv-actionwebservice', :version => '2.3.8', :lib => 'actionwebservice'
   config.gem 'addressable', :version => '~> 2.1.0', :lib => 'addressable/uri'
   config.gem 'mini_magick', :version => '~> 1.2.5', :lib => 'mini_magick'
+
+  config.gem "activemerchant", :lib => "active_merchant", :version => "1.9.3"
   
   # Use the filesystem for sessions instead of the database
   config.action_controller.session = { :key => "_typo_session", :secret => "8d7879bd56b9470b659cdcae88792622" }
@@ -106,5 +108,10 @@ if RAILS_ENV != 'test'
     ActionMailer::Base.delivery_method = :sendmail
   end
 end
+
+
+#ActiveMerchant::Billing::Base.integration_mode = :test
+#ActiveMerchant::Billing::PaypalGateway.pem_file = File.read(File.dirname(__FILE__) + '/../paypal/paypal_cert.pem')
+
 
 FLICKR_KEY='84f652422f05b96b29b9a960e0081c50'

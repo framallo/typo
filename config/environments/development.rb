@@ -22,9 +22,12 @@ config.log_level = :debug
 
 config.after_initialize do
   ActiveMerchant::Billing::Base.mode = :test
-  ::GATEWAY = ActiveMerchant::Billing::PaypalGateway.new(
-    :login => "test2_1286904764_biz_api1.gmail.com",
-    :password => "1286904774",
-    :signature => "Ac9X09CO607fxuEoRltSBk0XhxDhAM8CIXWMcB0hXnS3RZ.ZzApHvHM9"
-  )
+  #paypal_options = {
+  #:login = "test2_1286904764_biz@gmail.com",
+  #:password = "1286904774",
+  #:signature = "Ac9X09CO607fxuEoRltSBk0XhxDhAM8CIXWMcB0hXnS3RZ.ZzApHvHM9"
+  #}
+
+  #::STANDARD_GATEWAY = ActiveMerchant::Billing::PaypalGateway.new(paypal_options)
+  #::EXPRESS_GATEWAY = ActiveMerchant::Billing::PaypalExpressGateway.new(paypal_options)
 end

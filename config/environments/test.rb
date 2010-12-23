@@ -24,3 +24,9 @@ require 'ruby-debug'
 config.gem "factory_girl", :version => '~> 1.2.4'
 config.gem 'rspec', :lib => false
 config.gem 'rspec-rails', :lib => false
+
+config.after_initialize do
+  ActiveMerchant::Billing::Base.mode = :test
+  ::STANDARD_GATEWAY = ActiveMerchant::Billing::BogusGateway.new(paypal_options)
+  ::EXPRESS_GATEWAY = ActiveMerchant::Billing::BogusGateway.new(paypal_options)
+end
