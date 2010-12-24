@@ -51,7 +51,7 @@ Rails::Initializer.run do |config|
   config.gem 'addressable', :version => '~> 2.1.0', :lib => 'addressable/uri'
   config.gem 'mini_magick', :version => '~> 1.2.5', :lib => 'mini_magick'
 
-  config.gem "activemerchant", :lib => "active_merchant", :version => "1.9.3"
+  config.gem "activemerchant", :lib => "active_merchant", :version => "1.9.2"
   
   # Use the filesystem for sessions instead of the database
   config.action_controller.session = { :key => "_typo_session", :secret => "8d7879bd56b9470b659cdcae88792622" }
