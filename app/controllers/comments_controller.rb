@@ -26,7 +26,7 @@ class CommentsController < FeedbackController
         render :partial => '/articles/comment_failed', :object => @comment
       else
         redirect_to @article.permalink_url
-      end      
+      end
     end
   end
 
@@ -34,7 +34,7 @@ class CommentsController < FeedbackController
     if !session
       session :session => new
     end
-    
+
     if (params[:comment][:body].blank? rescue true)
       render :nothing => true
       return
@@ -44,7 +44,7 @@ class CommentsController < FeedbackController
     @comment = Comment.new(params[:comment])
 
     unless @article.comments_closed?
-      render :template => 'articles/comment_preview'
+      render :template => 'articles/comment_preview', :locals => { :comment => @comment }
     else
       render :text => 'Comment are closed'
     end

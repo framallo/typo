@@ -3,6 +3,7 @@ class Admin::ThemesController < Admin::BaseController
   require 'time'
   require 'rexml/document'
 
+  layout 'administration'
   cache_sweeper :blog_sweeper
 
   def index
@@ -30,44 +31,39 @@ class Admin::ThemesController < Admin::BaseController
   def editor
     case params[:type].to_s
     when "stylesheet"
-      path = this_blog.current_theme.path + "/stylesheets/"
-      if params[:file] =~ /css$/
-        filename = params[:file]
-      else
-        flash[:error] = _("You are not authorized to open this file")
-        return
-      end
+      subpath = "/stylesheets/"
+      filetype = /css$/
     when "layout"
-      path = this_blog.current_theme.path + "/layouts/"
-      if params[:file] =~ /rhtml$|erb$/
-        filename = params[:file]
-      else
-        flash[:error] = _("You are not authorized to open this file")
-        return
-      end
+      subpath = "/views/layouts/"
+      filetype = /rhtml$|erb$/
+    else
+      return
     end
 
-    if path and filename
-      if File.exists? path + filename
-        if File.writable? path + filename
-          case request.method
-          when :post
-            theme = File.new(path + filename, "r+")
-            theme.write(params[:theme_body])
-            theme.close
-            flash[:notice] = _("File saved successfully")
-            zap_theme_caches
-          end
-        else
-          flash[:notice] = _("Unable to write file")
-        end
-        @file = ""
-        file = File.readlines(path + filename, "r")
-        file.each do |line|
-          @file << line
-        end
-      end
+    if params[:file] =~ filetype
+      path = this_blog.current_theme.path + subpath
+      filename = path + params[:file]
+    else
+      flash[:error] = _("You are not authorized to open this file")
+      return
     end
+
+    unless File.exists? filename
+      flash[:error] = _("File does not exist")
+      return
+    end
+
+    if File.writable? filename
+      if request.post?
+        File.open(filename, "r+") { |theme| theme.write(params[:theme_body]) }
+        flash[:notice] = _("File saved successfully")
+        zap_theme_caches
+      end
+    else
+      flash[:notice] = _("Unable to write file")
+    end
+    
+    @file = File.read(filename)
   end
 
   def catalogue
@@ -97,7 +93,7 @@ class Admin::ThemesController < Admin::BaseController
   end
 
   private
-  
+
   class ThemeItem < Struct.new(:image, :name, :url, :author, :description)
     def to_s; name; end
   end

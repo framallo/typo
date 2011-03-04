@@ -1,3 +1,4 @@
+# coding: utf-8
 {
   :'nl' => {
     :date => {
@@ -71,7 +72,7 @@
       :errors => {
         :template => {
           :header => {
-            :one => "Kon dit {{model}} object niet opslaan: 1 fout.", 
+            :one => "Kon dit {{model}} object niet opslaan: 1 fout.",
             :other => "Kon dit {{model}} niet opslaan: {{count}} fouten."
           },
           :body => "Controleer alstublieft de volgende velden:"

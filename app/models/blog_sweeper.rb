@@ -40,6 +40,7 @@ class BlogSweeper < ActionController::Caching::Sweeper
     expire_for(record, true)
   end
 
+  # TODO: Simplify this. Almost every sweep amounts to a sweep_all.
   def expire_for(record, destroying = false)
     case record
     when Page
@@ -71,11 +72,11 @@ class BlogSweeper < ActionController::Caching::Sweeper
   end
 
   def sweep_pages
-    PageCache.zap_pages('pages') unless Blog.default.nil?
+    PageCache.zap_pages(%w{pages}) unless Blog.default.nil?
   end
 
   def logger
-    @logger ||= RAILS_DEFAULT_LOGGER || Logger.new(STDERR)
+    @logger ||= ::Rails.logger || Logger.new(STDERR)
   end
 
   private

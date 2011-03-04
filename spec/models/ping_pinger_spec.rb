@@ -1,7 +1,8 @@
-require File.dirname(__FILE__) + "/../spec_helper"
+require 'spec_helper'
 
 describe 'Ping::Pinger with Test::Unit' do
   before do
+    Factory(:blog)
     # avoid mocking constructor until we need it for something
     @pinger = Ping::Pinger.allocate
     class << @pinger

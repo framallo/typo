@@ -1,13 +1,10 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
-
-require 'http_mock'
+require 'spec_helper'
 
 describe Admin::ContentController do
-  integrate_views
-
+  render_views
 
   # Like it's a shared, need call everywhere
-  describe 'index action', :shared => true do
+  shared_examples_for 'index action' do
 
     it 'should render template index' do
       get 'index'
@@ -21,13 +18,15 @@ describe Admin::ContentController do
     end
 
     it 'should restrict only by searchstring' do
+      article = Factory(:article, :body => 'once uppon an originally time')
       get :index, :search => {:searchstring => 'originally'}
-      assigns(:articles).should == [contents(:xmltest)]
+      assigns(:articles).should == [article]
       response.should render_template('index')
       response.should be_success
     end
 
     it 'should restrict by searchstring and published_at' do
+      Factory(:article)
       get :index, :search => {:searchstring => 'originally', :published_at => '2008-08'}
       assigns(:articles).should be_empty
       response.should render_template('index')
@@ -36,30 +35,46 @@ describe Admin::ContentController do
 
   end
 
-  describe 'autosave action', :shared => true do
-    it 'should save new article with draft status and link to other article if first autosave' do
-      lambda do
-      lambda do
-        post :autosave, :article => {:allow_comments => '1',
-          :body_and_extended => 'my draft in autosave',
-          :keywords => 'mientag',
-          :permalink => 'big-post',
-          :title => 'big post',
-          :text_filter => 'none',
-          :published => '1',
-          :published_at => 'December 23, 2009 03:20 PM'}
-      end.should change(Article, :count)
-      end.should change(Tag, :count)
-      result = Article.last
-      result.body.should == 'my draft in autosave'
-      result.title.should == 'big post'
-      result.permalink.should == 'big-post'
-      result.parent_id.should be_nil
+  shared_examples_for 'autosave action' do
+    describe "first time for a new article" do
+      it 'should save new article with draft status and no parent article' do
+        lambda do
+        lambda do
+          post :autosave, :article => {:allow_comments => '1',
+            :body_and_extended => 'my draft in autosave',
+            :keywords => 'mientag',
+            :permalink => 'big-post',
+            :title => 'big post',
+            :text_filter => 'none',
+            :published => '1',
+            :published_at => 'December 23, 2009 03:20 PM'}
+        end.should change(Article, :count)
+        end.should change(Tag, :count)
+        result = Article.last
+        result.body.should == 'my draft in autosave'
+        result.title.should == 'big post'
+        result.permalink.should == 'big-post'
+        result.parent_id.should be_nil
+      end
+    end
+
+    describe "second time for a new article" do
+      it 'should save the same article with draft status and no parent article' do
+        draft = Factory(:article, :published => false, :state => 'draft')
+        lambda do
+          post :autosave, :article => {
+            :id => draft.id,
+            :body_and_extended => 'new body' }
+        end.should_not change(Article, :count)
+        result = Article.find(draft.id)
+        result.body.should == 'new body'
+        result.parent_id.should be_nil
+      end
     end
 
     describe "for a published article" do
       before :each do
-        @article = contents(:article1)
+        @article = Factory(:article)
         @data = {:allow_comments => @article.allow_comments,
           :body_and_extended => 'my draft in autosave',
           :keywords => '',
@@ -104,6 +119,7 @@ describe Admin::ContentController do
   describe 'insert_editor action' do
 
     before do
+      Factory(:blog)
       @user = users(:tobi)
       request.session = { :user => @user.id }
     end
@@ -121,25 +137,33 @@ describe Admin::ContentController do
   end
 
 
-  describe 'new action', :shared => true do
+  shared_examples_for 'new action' do
 
-    it 'should render new with get' do
-      get :new
-      response.should render_template('new')
-      assert_template_has 'article'
+    describe 'GET' do
+      it "renders the 'new' template" do
+        get :new
+        response.should render_template('new')
+        assigns(:article).should_not be_nil
+      end
+
+      it "correctly converts multi-word tags" do
+        a = Factory(:article, :keywords => '"foo bar", baz')
+        get :new, :id => a.id
+        response.should have_selector("input[id=article_keywords][value='baz, \"foo bar\"']")
+      end
+
     end
 
     def base_article(options={})
       { :title => "posted via tests!",
         :body => "A good body",
-        :keywords => "tagged",
         :allow_comments => '1',
         :allow_pings => '1' }.merge(options)
     end
 
     it 'should create article with no comments' do
       post(:new, 'article' => base_article({:allow_comments => '0'}),
-                 'categories' => [categories(:software).id])
+                 'categories' => [Factory(:category).id])
       assigns(:article).should_not be_allow_comments
       assigns(:article).should be_allow_pings
       assigns(:article).should be_published
@@ -147,13 +171,30 @@ describe Admin::ContentController do
 
     it 'should create article with no pings' do
       post(:new, 'article' => {:allow_pings => '0'},
-                 'categories' => [categories(:software).id])
+                 'categories' => [Factory(:category).id])
       assigns(:article).should be_allow_comments
       assigns(:article).should_not be_allow_pings
       assigns(:article).should be_published
     end
 
-    it 'should create' do
+    it 'should create an article linked to the current user' do
+      post :new, 'article' => base_article
+      new_article = Article.last
+      assert_equal @user, new_article.user
+    end
+
+    it 'should create new published article' do
+      lambda do
+        post :new, 'article' => base_article
+      end.should change(Article, :count_published_articles)
+    end
+
+    it 'should redirect to show' do
+      post :new, 'article' => base_article
+      assert_response :redirect, :action => 'show'
+    end
+
+    it 'should send notifications on create' do
       begin
         u = users(:randomuser)
         u.notify_via_email = true
@@ -161,22 +202,9 @@ describe Admin::ContentController do
         u.save!
         ActionMailer::Base.perform_deliveries = true
         ActionMailer::Base.deliveries = []
-        category = Factory(:category)
         emails = ActionMailer::Base.deliveries
 
-        assert_difference 'Article.count_published_articles' do
-          tags = ['foo', 'bar', 'baz bliz', 'gorp gack gar']
-          post :new,
-            'article' => base_article(:keywords => tags) ,
-            'categories' => [category.id]
-          assert_response :redirect, :action => 'show'
-        end
-
-        new_article = Article.last
-        assert_equal @user, new_article.user
-        assert_equal 1, new_article.categories.size
-        assert_equal [category], new_article.categories
-        assert_equal 4, new_article.tags.size
+        post :new, 'article' => base_article
 
         assert_equal(1, emails.size)
         assert_equal('randomuser@example.com', emails.first.to[0])
@@ -185,15 +213,35 @@ describe Admin::ContentController do
       end
     end
 
+    it 'should create an article in a category' do
+      category = Factory(:category)
+      post :new, 'article' => base_article, 'categories' => [category.id]
+      new_article = Article.last
+      assert_equal [category], new_article.categories
+    end
+
+    it 'should create an article with tags' do
+      post :new, 'article' => base_article(:keywords => "foo bar")
+      new_article = Article.last
+      assert_equal 2, new_article.tags.size
+    end
+
     it 'should create article in future' do
-      assert_no_difference 'Article.count_published_articles' do
+      lambda do
         post(:new,
-             :article =>  base_article(:published_at => Time.now + 1.hour) )
+             :article =>  base_article(:published_at => (Time.now + 1.hour).to_s) )
         assert_response :redirect, :action => 'show'
         assigns(:article).should_not be_published
-      end
+      end.should_not change(Article, :count_published_articles)
       assert_equal 1, Trigger.count
     end
+
+    it "should correctly interpret time zone in :published_at" do
+      post :new, 'article' => base_article(:published_at => "February 17, 2011 08:47 PM GMT+0100 (CET)")
+      new_article = Article.last
+      assert_equal Time.utc(2011, 2, 17, 19, 47), new_article.published_at
+    end
+
 
     it 'should create a filtered article' do
       body = "body via *markdown*"
@@ -209,22 +257,91 @@ describe Admin::ContentController do
       assert_equal "<p><em>foo</em></p>", new_article.html(:extended)
     end
 
+    describe "publishing a published article with an autosaved draft" do
+      before do
+        @orig = Factory(:article)
+        @draft = Factory(:article, :parent_id => @orig.id, :state => 'draft', :published => false)
+        post(:new,
+             :id => @orig.id,
+             :article => {:id => @draft.id, :body => 'update'})
+      end
+
+      it "updates the original" do
+        assert_raises ActiveRecord::RecordNotFound do
+          Article.find(@draft.id)
+        end
+      end
+
+      it "deletes the draft" do
+        Article.find(@orig.id).body.should == 'update'
+      end
+    end
+
+    describe "publishing a draft copy of a published article" do
+      before do
+        @orig = Factory(:article)
+        @draft = Factory(:article, :parent_id => @orig.id, :state => 'draft', :published => false)
+        post(:new,
+             :id => @draft.id,
+             :article => {:id => @draft.id, :body => 'update'})
+      end
+
+      it "updates the original" do
+        assert_raises ActiveRecord::RecordNotFound do
+          Article.find(@draft.id)
+        end
+      end
+
+      it "deletes the draft" do
+        Article.find(@orig.id).body.should == 'update'
+      end
+    end
+
+    describe "saving a published article as draft" do
+      before do
+        @orig = Factory(:article)
+        post(:new,
+             :id => @orig.id,
+             :article => {:title => @orig.title, :draft => 'draft',
+               :body => 'update' })
+      end
+
+      it "leaves the original published" do
+        @orig.reload
+        @orig.published.should == true
+      end
+
+      it "leaves the original as is" do
+        @orig.reload
+        @orig.body.should_not == 'update'
+      end
+
+      it "redirects to the index" do
+        response.should redirect_to(:action => 'index')
+      end
+
+      it "creates a draft" do
+        draft = Article.child_of(@orig.id).first
+        draft.parent_id.should == @orig.id
+        draft.should_not be_published
+      end
+    end
   end
 
-  describe 'destroy action', :shared => true do
+  shared_examples_for 'destroy action' do
 
     it 'should_not destroy article by get' do
-      assert_no_difference 'Article.count' do
+      lambda do
         art_id = @article.id
         assert_not_nil Article.find(art_id)
 
         get :destroy, 'id' => art_id
         response.should be_success
-      end
+      end.should_not change(Article, :count)
     end
 
     it 'should destroy article by post' do
-      assert_difference 'Article.count', -1 do
+      lambda do
         art_id = @article.id
         post :destroy, 'id' => art_id
         response.should redirect_to(:action => 'index')
@@ -232,7 +349,7 @@ describe Admin::ContentController do
         lambda{
           article = Article.find(art_id)
         }.should raise_error(ActiveRecord::RecordNotFound)
-      end
+      end.should change(Article, :count).by(-1)
     end
 
   end
@@ -241,8 +358,9 @@ describe Admin::ContentController do
   describe 'with admin connection' do
 
     before do
+      Factory(:blog)
       @user = users(:tobi)
-      @article = contents(:article1)
+      @article = Factory(:article)
       request.session = { :user => @user.id }
     end
 
@@ -254,12 +372,12 @@ describe Admin::ContentController do
     describe 'edit action' do
 
       it 'should edit article' do
-        get :edit, 'id' => contents(:article1).id
+        get :edit, 'id' => @article.id
         response.should render_template('new')
-        assert_template_has 'article'
+        assigns(:article).should_not be_nil
         assigns(:article).should be_valid
-        response.should have_text(/body/)
-        response.should have_text(/extended content/)
+        response.should contain(/body/)
+        response.should contain(/extended content/)
       end
 
       it 'should update article by edit action' do
@@ -268,13 +386,13 @@ describe Admin::ContentController do
           emails = ActionMailer::Base.deliveries
           emails.clear
 
-          art_id = contents(:article1).id
+          art_id = @article.id
 
           body = "another *textile* test"
           post :edit, 'id' => art_id, 'article' => {:body => body, :text_filter => 'textile'}
           assert_response :redirect, :action => 'show', :id => art_id
 
-          article = contents(:article1).reload
+          article = @article.reload
           article.text_filter.name.should == "textile"
           body.should == article.body
 
@@ -285,7 +403,7 @@ describe Admin::ContentController do
       end
 
       it 'should allow updating body_and_extended' do
-        article = contents(:article1)
+        article = @article
         post :edit, 'id' => article.id, 'article' => {
           'body_and_extended' => 'foo<!--more-->bar<!--more-->baz'
         }
@@ -296,7 +414,7 @@ describe Admin::ContentController do
       end
 
       it 'should delete draft about this article if update' do
-        article = contents(:article1)
+        article = @article
         draft = Article.create!(article.attributes.merge(:state => 'draft', :parent_id => article.id, :guid => nil))
         lambda do
           post :edit, 'id' => article.id, 'article' => { 'title' => 'new'}
@@ -305,7 +423,7 @@ describe Admin::ContentController do
       end
 
       it 'should delete all draft about this article if update not happen but why not' do
-        article = contents(:article1)
+        article = @article
         draft = Article.create!(article.attributes.merge(:state => 'draft', :parent_id => article.id, :guid => nil))
         draft_2 = Article.create!(article.attributes.merge(:state => 'draft', :parent_id => article.id, :guid => nil))
         lambda do
@@ -319,13 +437,14 @@ describe Admin::ContentController do
     describe 'resource_add action' do
 
       it 'should add resource' do
-        art_id = contents(:article1).id
-        get :resource_add, :id => art_id, :resource_id => resources(:resource1).id
+        art_id = @article.id
+        resource = Factory(:resource)
+        get :resource_add, :id => art_id, :resource_id => resource.id
 
         response.should render_template('_show_resources')
         assigns(:article).should be_valid
         assigns(:resource).should be_valid
-        assert Article.find(art_id).resources.include?(resources(:resource1))
+        assert Article.find(art_id).resources.include?(resource)
         assert_not_nil assigns(:article)
         assert_not_nil assigns(:resource)
         assert_not_nil assigns(:resources)
@@ -336,13 +455,14 @@ describe Admin::ContentController do
     describe 'resource_remove action' do
 
       it 'should remove resource' do
-        art_id = contents(:article1).id
-        get :resource_remove, :id => art_id, :resource_id => resources(:resource1).id
+        art_id = @article.id
+        resource = Factory(:resource)
+        get :resource_remove, :id => art_id, :resource_id => resource.id
 
         response.should render_template('_show_resources')
         assert assigns(:article).valid?
         assert assigns(:resource).valid?
-        assert !Article.find(art_id).resources.include?(resources(:resource1))
+        assert !Article.find(art_id).resources.include?(resource)
         assert_not_nil assigns(:article)
         assert_not_nil assigns(:resource)
         assert_not_nil assigns(:resources)
@@ -350,6 +470,12 @@ describe Admin::ContentController do
     end
 
     describe 'auto_complete_for_article_keywords action' do
+      before do
+        Factory(:tag, :name => 'foo', :articles => [Factory(:article)])
+        Factory(:tag, :name => 'bazz', :articles => [Factory(:article)])
+        Factory(:tag, :name => 'bar', :articles => [Factory(:article)])
+      end
+
       it 'should return foo for keywords fo' do
         get :auto_complete_for_article_keywords, :article => {:keywords => 'fo'}
         response.should be_success
@@ -362,7 +488,7 @@ describe Admin::ContentController do
         response.body.should == '<ul></ul>'
       end
 
-      it 'should return bar and baz for ba keyword' do
+      it 'should return bar and bazz for ba keyword' do
         get :auto_complete_for_article_keywords, :article => {:keywords => 'ba'}
         response.should be_success
         response.body.should == '<ul><li>bar</li><li>bazz</li></ul>'
@@ -374,8 +500,9 @@ describe Admin::ContentController do
   describe 'with publisher connection' do
 
     before :each do
+      Factory(:blog)
       @user = users(:user_publisher)
-      @article = contents(:publisher_article)
+      @article = Factory(:article, :user => @user)
       request.session = {:user => @user.id}
     end
 
@@ -386,14 +513,14 @@ describe Admin::ContentController do
     describe 'edit action' do
 
       it "should redirect if edit article doesn't his" do
-        get :edit, :id => contents(:article1).id
+        get :edit, :id => Factory(:article).id
         response.should redirect_to(:action => 'index')
       end
 
       it 'should edit article' do
-        get :edit, 'id' => contents(:publisher_article).id
+        get :edit, 'id' => @article.id
         response.should render_template('new')
-        assert_template_has 'article'
+        assigns(:article).should_not be_nil
         assigns(:article).should be_valid
       end
 
@@ -403,13 +530,13 @@ describe Admin::ContentController do
           emails = ActionMailer::Base.deliveries
           emails.clear
 
-          art_id = contents(:publisher_article).id
+          art_id = @article.id
 
           body = "another *textile* test"
           post :edit, 'id' => art_id, 'article' => {:body => body, :text_filter => 'textile'}
           response.should redirect_to(:action => 'index')
 
-          article = contents(:publisher_article).reload
+          article = @article.reload
           article.text_filter.name.should == "textile"
           body.should == article.body
 
@@ -423,21 +550,13 @@ describe Admin::ContentController do
     describe 'destroy action can be access' do
 
       it 'should redirect when want destroy article' do
-        assert_no_difference 'Article.count' do
-          get :destroy, :id => contents(:article1)
+        article = Factory(:article)
+        lambda do
+          get :destroy, :id => article.id
           response.should redirect_to(:action => 'index')
-        end
-      end
-
-      it 'should redirect when want destroy article' do
-        assert_no_difference 'Article.count' do
-          post :destroy, :id => contents(:article1)
-          response.should redirect_to(:action => 'index')
-        end
+        end.should_not change(Article, :count)
       end
 
     end
-
   end
-
 end

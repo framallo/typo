@@ -1,17 +1,24 @@
-<div class='dashboard-left ui-accordion ui-widget ui-helper-reset ui-accordion-icons'>
-  <h3 class='ui-accordion-header ui-helper-reset ui-state-active ui-corner-top'>
+<div class='dashboard-left widget-container'>
+  <h3 class='dark'>
     <span class='ui-icon ui-icon-person'> </span>
     <%= _("Welcome back, %s!" ,current_user.name ) -%>
   </h3>
-  <div class='ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active'>
+  <div class='widget-content'>
     <p><%= _("%d articles and %d comments were posted since your last connexion", @newposts, @newcomments) %></p>
-    <p><%= _("You're running Typo %s", TYPO_VERSION) %></p>
-    <ul> 
-      <li> <%= _("Total posts : %d", @statposts) %></li>
-      <li> <%= _("Your posts : %d" , @statuserposts) %></li>
-      <li> <%= _("Total comments : %d" , @statcomments) %></li>
-      <li> <%= _("Spam comments : %d" , @statspam) %></li>
-    </ul>
+    <p><%= _("You're running Typo %s", TYPO_VERSION) %> <%= @version_message %></p>
     
+    <p><strong><%= _("Content") %></strong></p>
+    <ul>
+      <li> <%= sprintf("%s %d", link_to(_("Total posts:"), :controller => 'admin/content'), @statposts) %></li>
+      <li> <%= sprintf("%s %d", link_to(_("Your posts:"), :controller => 'admin/content', :search => "[user_id]=#{current_user.id}"), @statuserposts) %></li>
+      <li> <%= sprintf("%s %d", link_to(_("Categories:"), :controller => 'admin/categories'), @categories) %></li>
+    </ul>
+
+    <p><strong><%= _("Feedback") %></strong></p>
+    <ul>
+      <li> <%= sprintf("%s %d", link_to(_("Total comments:"), :controller => 'admin/feedback') , @statcomments) %></li>
+      <li> <%= sprintf("%s %d", link_to(_("Spam comments:"), :controller => 'admin/feedback', :published => 'f'), @statspam) %></li>
+      <li> <%= sprintf("%s %d", link_to(_("In your spam queue:"), :controller => 'admin/feedback', :presumed_spam => 'f'), @presumedspam) %></li>
+    </ul>
   </div>
 </div>

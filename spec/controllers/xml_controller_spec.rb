@@ -1,8 +1,7 @@
-require File.dirname(__FILE__) + '/../spec_helper'
-require 'dns_mock'
+require 'spec_helper'
 
 describe XmlController do
-  integrate_views
+  render_views
 
   def assert_select(*args, &block)
     @html_document ||= HTML::Document.new(@response.body, false, true)
@@ -10,6 +9,7 @@ describe XmlController do
   end
 
   before do
+    Factory(:blog)
     @article = Factory.create(:article)
   end
 
@@ -30,6 +30,14 @@ describe XmlController do
     end
 
     it "returns valid RSS feed for trackbacks feed type" do
+      Feedback.delete_all
+
+      article = Factory.create(:article, :created_at => Time.now - 1.day,
+                               :allow_pings => true, :published => true)
+      Factory.create(:trackback, :article => article,
+                     :published_at => Time.now - 1.day,
+                     :published => true)
+
       get :feed, :type => 'trackbacks'
       assert_response :success
       assert_xml @response.body
@@ -64,6 +72,14 @@ describe XmlController do
   end
 
   it "test_feed_rss20_trackbacks" do
+    Feedback.delete_all
+
+    article = Factory.create(:article, :created_at => Time.now - 1.day,
+                             :allow_pings => true, :published => true)
+    Factory.create(:trackback, :article => article,
+                   :published_at => Time.now - 1.day,
+                   :published => true)
+
     get :feed, :format => 'rss20', :type => 'trackbacks'
     assert_response :success
     assert_xml @response.body
@@ -99,11 +115,16 @@ describe XmlController do
   end
 
   it "test_feed_atom10_trackbacks" do
+    Feedback.delete_all
+    article = Factory.create(:article, :created_at => Time.now - 1.day,
+      :allow_pings => true, :published => true)
+    Factory.create(:trackback, :article => article, :published_at => Time.now - 1.day,
+      :published => true)
+
     get :feed, :format => 'atom10', :type => 'trackbacks'
     assert_response :success
     assert_xml @response.body
     assert_feedvalidator @response.body
-
     assert_equal(assigns(:items).sort { |a, b| b.created_at <=> a.created_at },
                  assigns(:items))
 
@@ -169,6 +190,7 @@ describe XmlController do
 
   # TODO(laird): make this more robust
   it "test_sitemap" do
+    Factory(:category)
     get :feed, :format => 'googlesitemap', :type => 'sitemap'
 
     assert_response :success

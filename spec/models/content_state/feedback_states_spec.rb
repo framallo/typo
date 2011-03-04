@@ -1,12 +1,18 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require 'spec_helper'
 
 describe 'FeedbackStates from Test::Unit' do
   before(:each) do
-    @comment = contents(:article1).comments.build(:author => 'Piers',
+    Factory(:blog)
+    @comment = Factory(:article).comments.build(:author => 'Piers',
                                                   :body => 'Body')
   end
 
   it "test_ham_all_the_way" do
+    class << @comment
+      def classify
+        :ham
+      end
+    end
     assert @comment.unclassified?
     assert   @comment.published?
     assert   @comment.just_published?

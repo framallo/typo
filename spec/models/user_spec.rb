@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe User do
   describe 'Factory Girl' do
@@ -35,9 +35,14 @@ describe 'With the contents and users fixtures loaded' do
   end
 
   it 'The various article finders work appropriately' do
-    users(:tobi).articles.size.should == 8
-#    User.find(1).articles.find_published.size.should == Article.find(:all, :conditions => {:published => true}).size
-    users(:tobi).articles.published.size.should == 7
+    Factory(:blog)
+    tobi = Factory(:user)
+    7.times do
+      Factory.create(:article, :user => tobi)
+    end
+    Factory.create(:article, :published => false, :published_at => nil, :user => tobi)
+    tobi.articles.size.should == 8
+    tobi.articles.published.size.should == 7
   end
 
   it 'authenticate? works as expected' do
@@ -66,7 +71,7 @@ describe 'With a new user' do
       it "cannot be #{problematic}" do
         set_password password
         @user.should_not be_valid
-        @user.errors.should be_invalid('password')
+        @user.errors['password'].should be_any
       end
     end
 
@@ -74,7 +79,7 @@ describe 'With a new user' do
       @user.password = "foo"
       @user.password_confirmation = "bar"
       @user.should_not be_valid
-      @user.errors.should be_invalid('password')
+      @user.errors['password'].should be_any
     end
   end
 
@@ -91,7 +96,7 @@ describe 'With a new user' do
       it "cannot be #{problematic}" do
         @user.login = login
         @user.should_not be_valid
-        @user.errors.should be_invalid('login')
+        @user.errors['login'].should be_any
       end
     end
   end
@@ -116,7 +121,7 @@ describe 'With a user in the database' do
     u = User.new(:login => login) {|u| u.password = u.password_confirmation = 'secure password'}
 
     u.should_not be_valid
-    u.errors.should be_invalid('login')
+    u.errors['login'].should be_any
   end
 end
 
@@ -143,7 +148,7 @@ describe 'Updating an existing user' do
       it "cannot be #{problematic}" do
         set_password password
         @user.should_not be_valid
-        @user.errors.should be_invalid('password')
+        @user.errors['password'].should be_any
       end
     end
 
@@ -151,7 +156,7 @@ describe 'Updating an existing user' do
       @user.password = "foo"
       @user.password_confirmation = "bar"
       @user.should_not be_valid
-      @user.errors.should be_invalid('password')
+      @user.errors['password'].should be_any
     end
 
     it "is not actually changed when set to empty" do
@@ -185,7 +190,6 @@ end
 
 describe User do
   describe '#admin?' do
-
     it 'should return true if user is admin' do
       users(:tobi).should be_admin
     end
@@ -194,5 +198,11 @@ describe User do
       users(:user_publisher).should_not be_admin
     end
 
+  end
+
+  describe '#permalink_url' do
+    before(:each) { Factory(:blog) }
+    subject { users(:tobi).permalink_url }
+    it { should == 'http://myblog.net/users/show/tobi' }
   end
 end

@@ -1,33 +1,11 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+# coding: utf-8
+require 'spec_helper'
 
 describe Article do
 
   before do
+    Factory(:blog)
     @articles = []
-  end
-
-  describe 'Factory Girl' do
-    it 'should article factory valid' do
-      Factory(:article).should be_valid
-      Factory.build(:article).should be_valid
-    end
-    it 'should second_article factory valid' do
-      Factory(:second_article).should be_valid
-      Factory.build(:second_article).should be_valid
-    end
-    it 'should article_with_accent_in_html' do
-      Factory(:article_with_accent_in_html).should be_valid
-      Factory.build(:article_with_accent_in_html).should be_valid
-    end
-    it 'should store user too' do
-      a = Factory(:article)
-      a.user.should be_valid
-      Article.find(a.id).user.should_not be_nil
-    end
-    it 'should create multiple valid articles' do
-      Factory(:article).should be_valid
-      Factory(:article).should be_valid
-    end
   end
 
   def assert_results_are(*expected)
@@ -42,26 +20,53 @@ describe Article do
     assert_equal [:body, :extended], a.content_fields
   end
 
-  it "test_permalink_url with hostname" do
-    assert_equal 'http://myblog.net/2004/06/01/article-3', contents(:article3).permalink_url(anchor=nil, only_path=false)
-  end
+  describe "#permalink_url" do
+    describe "with hostname" do
+      subject { Factory(:article, :permalink => 'article-3', :published_at => Time.utc(2004, 6, 1)).permalink_url(anchor=nil, only_path=false) }
+      it { should == 'http://myblog.net/2004/06/01/article-3' }
+    end
 
-  it "test_permalink_url only path" do
-    assert_equal '/2004/06/01/article-3', contents(:article3).permalink_url(anchor=nil, only_path=true)
+    describe "without hostname" do
+      subject { Factory(:article, :permalink => 'article-3', :published_at => Time.utc(2004, 6, 1)).permalink_url(anchor=nil, only_path=true) }
+      it { should == '/2004/06/01/article-3' }
+    end
+
+    # NOTE: URLs must not have any multibyte characters in them. The
+    # browser may display them differently, though.
+    describe "with a multibyte permalink" do
+      subject { Factory(:article, :permalink => 'ルビー', :published_at => Time.utc(2004, 6, 1)) }
+      it "escapes the multibyte characters" do
+        subject.permalink_url(anchor=nil, only_path=true).should == '/2004/06/01/%E3%83%AB%E3%83%93%E3%83%BC'
+      end
+    end
+
+    describe "with a permalink containing a space" do
+      subject { Factory(:article, :permalink => 'hello there', :published_at => Time.utc(2004, 6, 1)) }
+      it "escapes the space as '%20', not as '+'" do
+        subject.permalink_url(anchor=nil, only_path=true).should == '/2004/06/01/hello%20there'
+      end
+    end
+
+    describe "with a permalink containing a plus" do
+      subject { Factory(:article, :permalink => 'one+two', :published_at => Time.utc(2004, 6, 1)) }
+      it "does not escape the plus" do
+        subject.permalink_url(anchor=nil, only_path=true).should == '/2004/06/01/one+two'
+      end
+    end
   end
 
   it "test_edit_url" do
-    a = contents(:article3)
+    a = Factory(:article)
     assert_equal "http://myblog.net/admin/content/edit/#{a.id}", a.edit_url
   end
 
   it "test_delete_url" do
-    a = contents(:article3)
+    a = Factory(:article)
     assert_equal "http://myblog.net/admin/content/destroy/#{a.id}", a.delete_url
   end
 
   it "test_feed_url" do
-    a = contents(:article3)
+    a = Factory(:article, :permalink => 'article-3', :published_at => Time.utc(2004, 6, 1))
     assert_equal "http://myblog.net/2004/06/01/article-3.atom", a.feed_url(:atom10)
     assert_equal "http://myblog.net/2004/06/01/article-3.rss", a.feed_url(:rss20)
   end
@@ -73,7 +78,7 @@ describe Article do
     a.title = "Zzz"
     assert a.save
 
-    a.categories << Category.find(categories(:software).id)
+    a.categories << Category.find(Factory(:category).id)
     assert_equal 1, a.categories.size
 
     b = Article.find(a.id)
@@ -81,8 +86,9 @@ describe Article do
   end
 
   it "test_permalink_with_title" do
-    assert_equal( contents(:article3),
-                  Article.find_by_permalink({:year => 2004, :month => 06, :day => 01, :title => "article-3"}) )
+    article = Factory(:article, :permalink => 'article-3', :published_at => Time.utc(2004, 6, 1))
+    assert_equal(article,
+                Article.find_by_permalink({:year => 2004, :month => 06, :day => 01, :title => "article-3"}) )
     assert_raises(ActiveRecord::RecordNotFound) do
       Article.find_by_permalink :year => 2005, :month => "06", :day => "01", :title => "article-5"
     end
@@ -98,9 +104,9 @@ describe Article do
   end
 
   it "test_perma_title" do
-    assert_equal "article-1", contents(:article1).stripped_title
-    assert_equal "article-2", contents(:article2).stripped_title
-    assert_equal "article-3", contents(:article3).stripped_title
+    assert_equal "article-1", Factory(:article, :title => 'Article 1!').stripped_title
+    assert_equal "article-2", Factory(:article, :title => 'Article 2!').stripped_title
+    assert_equal "article-3", Factory(:article, :title => 'Article 3!').stripped_title
   end
 
   it "test_html_title" do
@@ -111,43 +117,43 @@ describe Article do
     assert_equal 'this-is-a-test', a.permalink
   end
 
-  it "test_multibyte_title" do
+  it "does not escape multibyte characters in the autogenerated permalink" do
     a = Article.new
     a.title = "ルビー"
     assert a.save
 
-    assert_equal '%E3%83%AB%E3%83%93%E3%83%BC', a.permalink
+    a.permalink.should == "ルビー"
   end
 
   describe "the html_urls method" do
     it "test_urls" do
-      urls = contents(:article4).html_urls
+      urls = Factory(:article, :body => 'happy halloween "with":http://www.example.com/public').html_urls
       assert_equal ["http://www.example.com/public"], urls
     end
 
     it "should only match the href attribute" do
-      a = Factory.create :article
+      a = Factory.build :article
       a.body = '<a href="http://a/b">a</a> <a fhref="wrong">wrong</a>'
       urls = a.html_urls
       assert_equal ["http://a/b"], urls
     end
 
     it "should match across newlines" do
-      a = Factory.create :article
+      a = Factory.build :article
       a.body = "<a\nhref=\"http://foo/bar\">foo</a>"
       urls = a.html_urls
       assert_equal ["http://foo/bar"], urls
     end
 
     it "should match with single quotes" do
-      a = Factory.create :article
+      a = Factory.build :article
       a.body = "<a href='http://foo/bar'>foo</a>"
       urls = a.html_urls
       assert_equal ["http://foo/bar"], urls
     end
 
     it "should match with no quotes" do
-      a = Factory.create :article
+      a = Factory.build :article
       a.body = "<a href=http://foo/bar>foo</a>"
       urls = a.html_urls
       assert_equal ["http://foo/bar"], urls
@@ -162,95 +168,71 @@ describe Article do
   it "test_send_multiple_pings" do
   end
 
-  it "test_tags" do
-    a = Article.new(:title => 'Test tag article',
-                    :keywords => 'test tag tag stuff');
+  describe "with tags" do
+    it "recieves tags from the keywords property" do
+      a = Factory(:article, :keywords => 'foo bar')
+      assert_equal ['foo', 'bar'].sort, a.tags.collect {|t| t.name}.sort
+    end
 
-    assert_kind_of Article, a
-    assert_equal 0, a.tags.size
+    it "changes tags when changing keywords" do
+      a = Factory(:article, :keywords => 'foo bar')
+      a.keywords = 'foo baz'
+      a.save
+      assert_equal ['foo', 'baz'].sort, a.tags.collect {|t| t.name}.sort
+    end
 
-    a.keywords_to_tags
+    it "empties tags when keywords is set to ''" do
+      a = Factory(:article, :keywords => 'foo bar')
+      a.keywords = ''
+      a.save
+      assert_equal [], a.tags.collect {|t| t.name}.sort
+    end
 
-    assert_equal 3, a.tags.size
-    assert_equal ["test", "tag", "stuff"].sort , a.tags.collect {|t| t.name}.sort
-    assert a.save
+    it "properly deals with dots and spaces" do
+      c = Factory(:article, :keywords => 'test "tag test" web2.0')
+      assert_equal ['test', 'tag-test', 'web2-0'].sort, c.tags.collect(&:name).sort
+    end
 
-    a.keywords = 'tag bar stuff foo'
-    a.keywords_to_tags
-
-    assert_equal 4, a.tags.size
-    assert_equal ["foo", "bar", "tag", "stuff"].sort , a.tags.collect {|t| t.name}.sort
-
-    a.keywords='tag bar'
-    a.keywords_to_tags
-
-    assert_equal 2, a.tags.size
-
-    a.keywords=''
-    a.keywords_to_tags
-
-    assert_equal 0, a.tags.size
-
-    b = Article.new(:title => 'Tag Test 2',
-                    :keywords => 'tag test article one two three')
-
-    assert_kind_of Article,b
-    assert_equal 0, b.tags.size
-
-    c = Article.new(:title => 'Foo', :keywords => 'test "tag test" web2.0')
-    c.keywords_to_tags
-
-    assert_equal 3, c.tags.size
-    assert_equal ['test', 'tagtest', 'web2-0'].sort, c.tags.collect(&:name).sort    
+    # TODO: Get rid of using the keywords field.
+    # TODO: Add functions to Tag to convert collection from and to string.
+    it "lets the tag collection survive a load-save cycle"
   end
-  
-  it "more than 255 chars of tags should be OK" do
-    keywords = ""
-    (1..42).each { |tag| keywords << "tag#{tag}, " }
 
-    art = Article.create(:title => "Test article", :keywords => keywords)
-    art.tags.size.should == 42
-  end
-  
   it "test_find_published_by_tag_name" do
-    @articles = Tag.find_by_name(tags(:foo).name).published_articles
-
-    assert_results_are(:article1, :article2, :publisher_article)
+    art1 = Factory(:article)
+    art2 = Factory(:article)
+    Factory(:tag, :name => 'foo', :articles => [art1, art2])
+    articles = Tag.find_by_name('foo').published_articles
+    assert_equal 2, articles.size
   end
-
 
   it "test_find_published" do
+    article = Factory(:article, :title => 'Article 1!', :state => 'published')
+    Factory(:article, :published => false, :state => 'draft')
     @articles = Article.find_published
-    assert_results_are(:search_target, :article1, :article2,
-                       :article3, :inactive_article,:xmltest,
-                       :spammed_article, :publisher_article, :markdown_article, :utf8_article)
-
-    @articles = Article.find_published(:all,
-                                                  :conditions => "title = 'Article 1!'")
-    assert_results_are :article1
+    assert_equal 1, @articles.size
+    @articles = Article.find_published(:all, :conditions => "title = 'Article 1!'")
+    assert_equal [article], @articles
   end
 
   it "test_just_published_flag" do
-    art = Article.new(:title => 'title',
-                                   :body => 'body',
-                                   :published => true)
+
+    art = Article.new(:title => 'title', :body => 'body', :published => true)
+
     assert art.just_changed_published_status?
     assert art.save
 
     art = Article.find(art.id)
     assert !art.just_changed_published_status?
 
-    art = Article.create!(:title => 'title2',
-                          :body => 'body',
-                          :published => false)
+    art = Article.create!(:title => 'title2', :body => 'body', :published => false)
 
     assert ! art.just_changed_published_status?
   end
 
   it "test_future_publishing" do
     assert_sets_trigger(Article.create!(:title => 'title', :body => 'body',
-                                        :published => true,
-                                        :published_at => Time.now + 4.seconds))
+      :published => true, :published_at => Time.now + 4.seconds))
   end
 
   it "test_future_publishing_without_published_flag" do
@@ -259,14 +241,11 @@ describe Article do
   end
 
   it "test_triggers_are_dependent" do
+    pending "Needs a fix for Rails ticket #5105: has_many: Dependent deleting does not work with STI"
     art = Article.create!(:title => 'title', :body => 'body',
                           :published_at => Time.now + 1.hour)
-    triggers = Trigger.find(:all)
-    STDERR.puts triggers.inspect
     assert_equal 1, Trigger.count
     art.destroy
-    triggers = Trigger.find(:all)
-    STDERR.puts triggers.inspect    
     assert_equal 0, Trigger.count
   end
 
@@ -284,16 +263,24 @@ describe Article do
   end
 
   it "test_find_published_by_category" do
+    cat = Factory(:category, :permalink => 'personal')
+    cat.articles << Factory(:article)
+    cat.articles << Factory(:article)
+    cat.articles << Factory(:article)
+
+    cat = Factory(:category, :permalink => 'software')
+    cat.articles << Factory(:article)
+
     Article.create!(:title      => "News from the future!",
                     :body       => "The future is cool!",
                     :keywords   => "future",
                     :published_at => Time.now + 12.minutes)
 
-    @articles = Category.find_by_permalink('personal').published_articles
-    assert_results_are :article1, :article2, :article3
+    articles = Category.find_by_permalink('personal').published_articles
+    assert_equal 3, articles.size
 
-    @articles = Category.find_by_permalink('software').published_articles
-    assert_results_are :article1
+    articles = Category.find_by_permalink('software').published_articles
+    assert_equal 1, articles.size
   end
 
   it "test_find_published_by_nonexistent_category_raises_exception" do
@@ -303,9 +290,11 @@ describe Article do
   end
 
   it "test_destroy_file_upload_associations" do
-    a = contents(:article1)
+    a = Factory(:article)
+    Factory(:resource, :article => a)
+    Factory(:resource, :article => a)
     assert_equal 2, a.resources.size
-    a.resources << resources(:resource3)
+    a.resources << Factory(:resource)
     assert_equal 3, a.resources.size
     a.destroy
     assert_equal 0, Resource.find(:all, :conditions => "article_id = #{a.id}").size
@@ -322,14 +311,8 @@ describe Article do
     assert_equal ['bob', 'randomuser'], a.notify_users.collect {|u| u.login }.sort
   end
 
-  it "test_tags_on_update" do
-    contents(:article3).update_attribute :keywords, "my new tags"
-    assert_equal 3, contents(:article3).reload.tags.size
-    assert contents(:article3).tags.include?(Tag.find_by_name("new"))
-  end
-
   it "test_withdrawal" do
-    art = Article.find(contents(:article1).id)
+    art = Factory(:article)
     assert   art.published?
     assert ! art.withdrawn?
     art.withdraw!
@@ -341,30 +324,35 @@ describe Article do
   end
 
   it "test_default_filter" do
-    a = Article.find(contents(:article1).id)
+    a = Factory(:article)
     assert_equal 'textile', a.default_text_filter.name
   end
 
   it 'should get only ham not spam comment' do
-    contents(:article2).comments.ham.should == [feedback(:spam_comment)]
-    contents(:article2).comments.count.should == 2
+    article = Factory(:article)
+    ham_comment = Factory(:comment, :article => article)
+    spam_comment = Factory(:spam_comment, :article => article)
+    article.comments.ham.should == [ham_comment]
+    article.comments.count.should == 2
   end
 
   describe '#access_by?' do
 
     it 'admin should be access to an article write by another' do
-      contents(:article2).should be_access_by(users(:tobi))
+      Factory(:article).should be_access_by(users(:tobi))
     end
 
     it 'admin should be access to an article write by himself' do
-      contents(:article1).should be_access_by(users(:tobi))
+      article = Factory(:article, :author => users(:tobi))
+      article.should be_access_by(users(:tobi))
     end
 
   end
 
   describe 'body_and_extended' do
     before :each do
-      @article = contents(:article1)
+      @article = Factory(:article,
+        :extended => 'extended text to explain more and more how Typo is wonderful')
     end
 
     it 'should combine body and extended content' do
@@ -380,19 +368,11 @@ describe Article do
 
   describe '#search' do
 
-    describe 'is an array', :shared => true do
-      it 'should get an array' do
-        @articles.should be_a(Array)
-      end
-    end
-
     describe 'with several words and no result' do
 
       before :each do
         @articles = Article.search('hello world')
       end
-
-      it_should_behave_like 'is an array'
 
       it 'should be empty' do
         @articles.should be_empty
@@ -400,22 +380,17 @@ describe Article do
     end
 
     describe 'with one word and result' do
-
-      before :each do
-        @articles = Article.search('extended')
-      end
-
-      it_should_behave_like 'is an array'
-
-      it 'should have one item' do
-        assert_equal 9, @articles.size
+      it 'should have nine items' do
+        Factory(:article, :extended => "extended talk")
+        Factory(:article, :extended => "Once uppon a time, an extended story")
+        assert_equal 2, Article.search('extended').size
       end
     end
   end
 
   describe 'body_and_extended=' do
     before :each do
-      @article = contents(:article1)
+      @article = Factory(:article)
     end
 
     it 'should split apart values at <!--more-->' do
@@ -451,25 +426,27 @@ describe Article do
 
   describe '#comment_url' do
     it 'should render complete url of comment' do
-      contents(:article1).comment_url.should == "http://myblog.net/comments?article_id=#{contents(:article1).id}"
+      article = Factory(:article)
+      article.comment_url.should == "http://myblog.net/comments?article_id=#{article.id}"
     end
   end
 
   describe '#preview_comment_url' do
     it 'should render complete url of comment' do
-      contents(:article1).preview_comment_url.should == "http://myblog.net/comments/preview?article_id=#{contents(:article1).id}"
+      article = Factory(:article)
+      article.preview_comment_url.should == "http://myblog.net/comments/preview?article_id=#{article.id}"
     end
   end
 
   it "test_can_ping_fresh_article_iff_it_allows_pings" do
-    a = Article.find(contents(:article1).id)
+    a = Factory(:article, :allow_pings => true)
     assert_equal(false, a.pings_closed?)
     a.allow_pings = false
     assert_equal(true, a.pings_closed?)
   end
 
   it "test_cannot_ping_old_article" do
-    a = Article.find(contents(:article3).id)
+    a = Factory(:article, :allow_pings => false)
     assert_equal(true, a.pings_closed?)
     a.allow_pings = false
     assert_equal(true, a.pings_closed?)
@@ -507,21 +484,68 @@ describe Article do
 
   describe '#has_child?' do
     it 'should be true if article has one to link it by parent_id' do
-      Factory(:article, :parent_id => contents(:article1).id)
-      contents(:article1).should be_has_child
+      parent = Factory(:article)
+      Factory(:article, :parent_id => parent.id)
+      parent.should be_has_child
     end
     it 'should be false if article has no article to link it by parent_id' do
-      contents(:article1).should_not be_has_child
+      Factory(:article, :parent_id => nil).should_not be_has_child
     end
   end
 
   describe 'self#last_draft(id)' do
     it 'should return article if no draft associated' do
-      Article.last_draft(contents(:article1).id).should == contents(:article1)
+      draft = Factory(:article, :state => 'draft')
+      Article.last_draft(draft.id).should == draft
     end
     it 'should return draft associated to this article if there are one' do
-      draft = Factory(:article, :parent_id => contents(:article1).id, :state => 'draft')
-      Article.last_draft(contents(:article1).id).should == draft
+      parent = Factory(:article)
+      draft = Factory(:article, :parent_id => parent.id, :state => 'draft')
+      Article.last_draft(draft.id).should == draft
+    end
+  end
+
+  describe "an article published just before midnight UTC" do
+    before do
+      @a = Factory(:article)
+      @a.published_at = "21 Feb 2011 23:30 UTC"
+      @a.save
+      @a.reload
+    end
+
+    describe "#permalink_url" do
+      it "uses UTC to determine correct day" do
+        @a.permalink_url.should == "http://myblog.net/2011/02/21/a-big-article"
+      end
+    end
+
+    describe "#find_by_permalink" do
+      it "uses UTC to determine correct day" do
+        a = Article.find_by_permalink :year => 2011, :month => 2, :day => 21, :permalink => 'a-big-article' 
+        a.should == @a
+      end
+    end
+  end
+
+  describe "an article published just after midnight UTC" do
+    before do
+      @a = Factory(:article)
+      @a.published_at = "22 Feb 2011 00:30 UTC"
+      @a.save
+      @a.reload
+    end
+
+    describe "#permalink_url" do
+      it "uses UTC to determine correct day" do
+        @a.permalink_url.should == "http://myblog.net/2011/02/22/a-big-article"
+      end
+    end
+
+    describe "#find_by_permalink" do
+      it "uses UTC to determine correct day" do
+        a = Article.find_by_permalink :year => 2011, :month => 2, :day => 22, :permalink => 'a-big-article' 
+        a.should == @a
+      end
     end
   end
 end

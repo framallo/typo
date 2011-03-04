@@ -1,7 +1,9 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require 'spec_helper'
 
 describe Admin::TagsController do
+
   before do
+    Factory(:blog)
     request.session = { :user => users(:tobi).id }
   end
 
@@ -17,14 +19,12 @@ describe Admin::TagsController do
     it 'should render template index' do
       response.should render_template('index')
     end
-
   end
-
 
   describe 'edit action' do
     before(:each) do
-      @tag_id = contents(:article1).tags.first.id
-      get :edit, :id => @tag_id
+      tag_id = Factory(:tag).id
+      get :edit, :id => tag_id
     end
 
     it 'should be success' do
@@ -41,12 +41,10 @@ describe Admin::TagsController do
 
   end
 
-
   describe 'update action' do
-
-    before :each do
-      @tag = Tag.find_by_id(contents(:article1).tags.first.id)
-      post :edit, 'id' => @tag.id, 'tag' => {:name => 'foobar', :display_name => 'Foo Bar'}
+    before do
+      @tag = Factory(:tag)
+      post :edit, 'id' => @tag.id, 'tag' => {:display_name => 'Foo Bar'}
     end
 
     it 'should redirect to index' do
@@ -55,10 +53,18 @@ describe Admin::TagsController do
 
     it 'should update tag' do
       @tag.reload
-      @tag.name.should == 'foobar'
-      @tag.display_name == "Foo Bar"
+      @tag.name.should == 'foo-bar'
+      @tag.display_name.should == "Foo Bar"
     end
 
+    it 'should create a redirect from the old to the new' do
+      old_name = @tag.name
+      @tag.reload
+      new_name = @tag.name
+
+      r = Redirect.find_by_from_path "/tag/#{old_name}"
+      r.to_path.should == "/tag/#{new_name}"
+    end
   end
-  
+
 end

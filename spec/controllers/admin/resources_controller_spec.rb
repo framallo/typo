@@ -1,7 +1,10 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require 'spec_helper'
 
 describe Admin::ResourcesController do
+  render_views
+
   before do
+    Factory(:blog)
     @request.session = { :user => users(:tobi).id }
   end
 
@@ -9,33 +12,11 @@ describe Admin::ResourcesController do
     get :index
     assert_response :success
     assert_template 'index'
-    assert_template_has 'resources'
-    assert_not_nil assigns(:resources)
-  end
-
-  it "test_images" do
-    get :images
-    assert_response :success
-    assert_template 'images'
-    assert_template_has 'resources'
-    assert_not_nil assigns(:resources)
+    assigns(:resources).should_not be_nil
   end
 
   it "test_destroy_image" do
-    res_id = resources(:resource1).id
-    assert_not_nil Resource.find(res_id)
-
-    get :destroy, :id => res_id
-    assert_response :success
-    assert_template 'destroy'
-    assert_not_nil assigns(:file)
-
-    post :destroy, :id => res_id
-    response.should redirect_to(:action => 'images')
-  end
-
-  it "test_destroy_regular_file" do
-    res_id = resources(:resource3).id
+    res_id = Factory(:resource).id
     assert_not_nil Resource.find(res_id)
 
     get :destroy, :id => res_id
@@ -46,7 +27,21 @@ describe Admin::ResourcesController do
     post :destroy, :id => res_id
     response.should redirect_to(:action => 'index')
   end
-  
+
+  it "test_destroy_regular_file" do
+    res_id = Factory(:resource, :mime => 'text/plain').id
+    assert_not_nil Resource.find(res_id)
+
+    get :destroy, :id => res_id
+    assert_response :success
+    assert_template 'destroy'
+    assert_not_nil assigns(:file)
+
+    post :destroy, :id => res_id
+    assert_response :redirect
+    response.should redirect_to(:action => 'index')
+  end
+
   it "test_upload" do
     # unsure how to test upload constructs :'(
   end

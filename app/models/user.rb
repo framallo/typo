@@ -27,7 +27,7 @@ class User < ActiveRecord::Base
     find(:first,
          :conditions => ["login = ? AND password = ? AND state = ?", login, sha1(pass), 'active'])
   end
-  
+
   def update_connection_time
     self.last_venue = last_connection
     self.last_connection = Time.now
@@ -46,25 +46,26 @@ class User < ActiveRecord::Base
   def remember_me_until(time)
     self.remember_token_expires_at = time
     self.remember_token            = Digest::SHA1.hexdigest("#{email}--#{remember_token_expires_at}")
-    save(false)
+    save(:validate => false)
   end
 
   def forget_me
     self.remember_token_expires_at = nil
     self.remember_token            = nil
-    save(false)
+    save(:validate => false)
   end
 
-  def permalink_url(anchor=nil, only_path=true)
+  def permalink_url(anchor=nil, only_path=false)
     blog = Blog.default # remove me...
 
     blog.url_for(
       :controller => 'users',
       :action => 'show',
-      :id => permalink
+      :id => permalink,
+      :only_path => only_path
     )
   end
-  
+
   def self.authenticate?(login, pass)
     user = self.authenticate(login, pass)
     return false if user.nil?
@@ -74,7 +75,7 @@ class User < ActiveRecord::Base
   end
 
   def self.find_by_permalink(permalink)
-    returning(self.find_by_login(permalink)) do |user|
+    self.find_by_login(permalink).tap do |user|
       raise ActiveRecord::RecordNotFound unless user
     end
   end
@@ -83,7 +84,7 @@ class User < ActiveRecord::Base
   def project_modules
     profile.modules.collect { |m| AccessControl.project_module(profile.label, m) }.uniq.compact rescue []
   end
-  
+
   # Generate Methods takes from AccessControl rules
   # Example:
   #
@@ -199,8 +200,8 @@ class User < ActiveRecord::Base
   # Send a mail of creation user to the user create
   def send_create_notification
     begin
-      email_notification = NotificationMailer.create_notif_user(self)
-      EmailNotify.send_message(self,email_notification)
+      email_notification = NotificationMailer.notif_user(self)
+      EmailNotify.send_message(self, email_notification)
     rescue => err
       logger.error "Unable to send notification of create user email: #{err.inspect}"
     end

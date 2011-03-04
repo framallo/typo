@@ -16,8 +16,8 @@ class SpamProtection
 
     reason = catch(:hit) do
       case string
-        when Format::IP_ADDRESS: self.scan_ip(string)
-        when Format::HTTP_URI: self.scan_uris(string) rescue URI::InvalidURIError
+        when Format::IP_ADDRESS then self.scan_ip(string)
+        when Format::HTTP_URI then self.scan_uris([string]) rescue URI::InvalidURIError
         else self.scan_text(string)
       end
     end
@@ -90,7 +90,7 @@ class SpamProtection
   end
 
   def logger
-    @logger ||= RAILS_DEFAULT_LOGGER || Logger.new(STDOUT)
+    @logger ||= ::Rails.logger || Logger.new(STDOUT)
   end
 end
 

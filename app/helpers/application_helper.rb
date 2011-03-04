@@ -1,4 +1,4 @@
-# The methods added to this helper will be available to all templates in the application.
+# Methods added to this helper will be available to all templates in the application.
 require 'digest/sha1'
 
 module ApplicationHelper
@@ -15,11 +15,11 @@ module ApplicationHelper
 
   # Produce a link to the permalink_url of 'item'.
   def link_to_permalink(item, title, anchor=nil, style=nil, nofollow=nil)
-    anchor = "##{anchor}" if anchor
-    class_attr = "class=\"#{style}\"" if style
-    rel_attr = "rel=\"#{nofollow}\"" if nofollow
+    options = {}
+    options[:class] = style if style
+    options[:rel] = "nofollow" if nofollow
 
-    "<a href=\"#{item.permalink_url}#{anchor}\" #{rel_attr} #{class_attr}>#{title}</a>"
+    link_to title, item.permalink_url(anchor), options
   end
 
   # The '5 comments' link from the bottom of articles
@@ -29,20 +29,19 @@ module ApplicationHelper
     link_to_permalink(article,pluralize(comment_count, _('no comments'), _('1 comment'), _('%d comments', comment_count)),'comments')
   end
 
+  # wrapper for TypoPlugins::Avatar
+  # options is a hash which should contain :email and :url for the plugin
+  # (gravatar will use :email, pavatar will use :url, etc.)
+  def avatar_tag(options = {})
+    avatar_class = this_blog.plugin_avatar.constantize
+    return '' unless avatar_class.respond_to?(:get_avatar)
+    avatar_class.get_avatar(options)
+  end
+
+
   def trackbacks_link(article)
     trackbacks_count = article.published_trackbacks.size
     link_to_permalink(article,pluralize(trackbacks_count, _('no trackbacks'), _('1 trackback'), _('%d trackbacks',trackbacks_count)),'trackbacks')
-  end
-
-  def check_cache(aggregator, *args)
-    hash = "#{aggregator.to_s}_#{args.collect { |arg| Digest::SHA1.hexdigest(arg) }.join('_') }".to_sym
-    controller.cache[hash] ||= aggregator.new(*args)
-  end
-
-  def js_distance_of_time_in_words_to_now(date)
-    time = _(date.utc.strftime(_("%%a, %%d %%b %%Y %%H:%%M:%%S GMT", date.utc)))
-    timestamp = date.utc.to_i ;
-    "<span class=\"typo_date date gmttimestamp-#{timestamp}\" title=\"#{time}\" >#{time}</span>"
   end
 
   def meta_tag(name, value)
@@ -64,7 +63,7 @@ module ApplicationHelper
 
   def markup_help_popup(markup, text)
     if markup and markup.commenthelp.size > 1
-      "<a href=\"#{url_for :controller => :articles, :action => 'markup_help', :id => markup.id}\" onclick=\"return popup(this, 'Typo Markup Help')\">#{text}</a>"
+      "<a href=\"#{url_for :controller => 'articles', :action => 'markup_help', :id => markup.id}\" onclick=\"return popup(this, 'Typo Markup Help')\">#{text}</a>"
     else
       ''
     end
@@ -86,17 +85,6 @@ module ApplicationHelper
 
     output.join("<br />\n")
   end
-  
-  # Generate the image tag for a commenters gravatar based on their email address
-  # Valid options are described at http://www.gravatar.com/implement.php
-  def gravatar_tag(email, options={})
-    options.update(:gravatar_id => Digest::MD5.hexdigest(email.strip))
-    options[:default] = CGI::escape(options[:default]) if options.include?(:default)
-    options[:size] ||= 60
-
-    image_tag("http://www.gravatar.com/avatar.php?" <<
-      options.map { |key,value| "#{key}=#{value}" }.sort.join("&"), :class => "gravatar")
-  end
 
   def feed_title
     case
@@ -112,7 +100,6 @@ module ApplicationHelper
   def html(content, what = :all, deprecated = false)
     content.html(what)
   end
-
 
   def author_link(article)
     if this_blog.link_to_author and article.user and article.user.email.to_s.size>0
@@ -140,11 +127,11 @@ module ApplicationHelper
   end
 
   def javascript_include_lang
-    javascript_include_tag "lang/#{Localization.lang.to_s}" if File.exists? File.join(RAILS_ROOT, 'public', 'lang', Localization.lang.to_s)    
+    javascript_include_tag "lang/#{Localization.lang.to_s}" if File.exists? File.join(::Rails.root.to_s, 'public', 'lang', Localization.lang.to_s)
   end
 
   def page_header
-    page_header_includes = contents.collect { |c| c.whiteboard }.collect do |w|
+    page_header_includes = content_array.collect { |c| c.whiteboard }.collect do |w|
       w.select {|k,v| k =~ /^page_header_/}.collect do |(k,v)|
         v = v.chomp
         # trim the same number of spaces from the beginning of each line
@@ -159,6 +146,7 @@ module ApplicationHelper
   #{ meta_tag 'ICBM', this_blog.geourl_location unless this_blog.geourl_location.blank? }
   #{ meta_tag 'description', @description unless @description.blank? }
   #{ meta_tag 'robots', 'noindex, follow' unless @noindex.nil? }
+  #{ meta_tag 'google-site-verification', this_blog.google_verification unless this_blog.google_verification.blank?}
   <meta name="generator" content="Typo #{TYPO_VERSION}" />
   #{ meta_tag 'keywords', @keywords unless @keywords.blank? }
   <link rel="EditURI" type="application/rsd+xml" title="RSD" href="#{ url_for :controller => '/xml', :action => 'rsd' }" />
@@ -176,24 +164,78 @@ module ApplicationHelper
   end
 
   def feed_atom
-    url_for(:format => :atom, :only_path => false)
+    if params[:action] == 'search'
+      url_for(:only_path => false, :format => 'atom', :q => params[:q])
+    elsif not @article.nil?
+      @article.feed_url(:atom)
+    elsif not @auto_discovery_url_atom.nil?
+      @auto_discovery_url_atom
+    else
+      url_for(:only_path => false, :format => 'atom')
+    end
   end
 
   def feed_rss
-    url_for(:format => :rss, :only_path => false)
+    if params[:action] == 'search'
+      url_for(:only_path => false, :format => 'rss', :q => params[:q])
+    elsif not @article.nil?
+      @article.feed_url(:rss20)
+    elsif not @auto_discovery_url_rss.nil?
+      @auto_discovery_url_rss
+    else
+      url_for(:only_path => false, :format => 'rss')
+    end
   end
 
   def render_the_flash
-    return unless flash[:notice] or flash[:error]
+    return unless flash[:notice] or flash[:error] or flash[:warning]
     the_class = flash[:error] ? 'ui-state-error' : 'ui-state-highlight'
     the_icon = flash[:error] ? 'ui-icon-alert' : 'ui-icon-info'
-    
+
     html = "<div class='ui-widget settings'>"
-    html << "<div class='#{the_class} ui-corner-all' style='padding: 0 .7em;'>" 
-    html << "<p><span class='ui-icon #{the_icon}' style='float: left; margin-right: .3em;'></span>"
-    html << render_flash rescue nil	
+    html << "<div class='#{the_class}' style='padding: 0 .7em; margin: 0.7em'>"
+    html << "<p><span class='ui-icon #{the_icon}' style='float: left;'></span>"
+    html << render_flash rescue nil
     html << "</div>"
-    html << "</div>"    
+    html << "</div>"
+  end
+
+  def content_array
+    if @articles
+      @articles
+    elsif @article
+      [@article]
+    elsif @page
+      [@page]
+    else
+      []
+    end
   end
   
+  def new_js_distance_of_time_in_words_to_now(date)
+    time = _(date.utc.strftime(_("%%a, %%d %%b %%Y %%H:%%M:%%S GMT", date.utc)))
+    timestamp = date.utc.to_i ;
+    "<span class=\"typo_date date gmttimestamp-#{timestamp}\" title=\"#{time}\" >#{time}</span>"
+  end
+  
+  def display_date(date)
+    date.strftime(this_blog.date_format)
+  end
+  
+  def display_time(time)
+    time.strftime(this_blog.time_format)
+  end  
+  
+  def display_date_and_time(timestamp)
+    return new_js_distance_of_time_in_words_to_now(timestamp) if this_blog.date_format == 'distance_of_time_in_words'
+    "#{display_date(timestamp)} #{_('at')} #{display_time(timestamp)}"
+  end
+  
+  def js_distance_of_time_in_words_to_now(date)
+    display_date_and_time date
+  end
+
+  def this_blog
+    @blog ||= Blog.default
+  end
 end

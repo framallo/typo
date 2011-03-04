@@ -1,8 +1,7 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe "Given the first Blog fixture" do
   before(:each) {
-    Blog.destroy_all
     RouteCache.clear
     @blog = Factory.create :blog
   }
@@ -21,22 +20,24 @@ describe "Given the first Blog fixture" do
   end
 
   describe "running in the host root" do
-    it ":base_url == 'http://myblog.net/'" do
-      @blog.base_url.should == 'http://myblog.net'
-    end
+    specify { @blog.base_url.should == 'http://myblog.net' }
 
     describe "blog.url_for" do
-      it "should return the correct URL for a hash argument" do
-        @blog.url_for(:controller => 'articles', :action => 'read', :id => 1).should == 'http://myblog.net/articles/read/1'
+      describe "with a hash argument" do
+        subject { @blog.url_for(:controller => 'articles', :action => 'read', :id => 1) }
+        it { should == 'http://myblog.net/articles/read/1' }
       end
-      it "should return the correct URL for a hash argument with only_path" do
-        @blog.base_url.should == 'http://myblog.net'
-        @blog.url_for(:controller => 'articles', :action => 'read', :id => 1,
-                     :only_path => true).should == '/articles/read/1'
+
+      describe "with a hash argument with only_path" do
+        subject { @blog.url_for(:controller => 'articles', :action => 'read', :id => 1, :only_path => true) }
+        it { should == '/articles/read/1' }
       end
-      it "should return the correct URL for a string argument" do
-        @blog.url_for('articles/read/1').should == 'http://myblog.net/articles/read/1'
+
+      describe "with a string argument" do
+        subject { @blog.url_for('articles/read/1') }
+        it { should == 'http://myblog.net/articles/read/1' }
       end
+
       it "should return the correct URL for a hash argument with only_path" do
         @blog.url_for('articles/read/1', :only_path => true).should == '/articles/read/1'
       end
@@ -74,8 +75,8 @@ end
 
 describe "The default blog" do
   it "should pick up updates after a cache clear" do
-    a = Blog.default
-    b = blogs(:default)
+    Factory(:blog)
+    b = Blog.default
     b.blog_name = "some other name"
     c = Blog.default
     c.blog_name.should == "some other name"
@@ -84,8 +85,6 @@ end
 
 
 describe "Given no blogs" do
-  before(:each)  { Blog.destroy_all }
-
   it "should allow the creation of a valid default blog" do
     Blog.new.should be_valid
   end
@@ -94,7 +93,7 @@ end
 describe "Valid permalink in blog" do
 
   before :each do
-    @blog = blogs(:default)
+    @blog = Factory(:blog)
   end
 
   ['foo', 'year', 'day', 'month', 'title', '%title', 'title%', '/year/month/day/title', '%title%.html.atom', '%title%.html.rss'].each do |permalink_type|

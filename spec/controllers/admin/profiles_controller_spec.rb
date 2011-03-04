@@ -1,9 +1,10 @@
-require File.dirname(__FILE__) + '/../../spec_helper'
+require 'spec_helper'
 
 describe Admin::ProfilesController do
 
   describe "#index" do
     it 'should render index' do
+      Factory(:blog)
       users(:tobi).profile.label.should == 'admin'
       request.session = { :user => users(:tobi).id }
       get :index
@@ -14,6 +15,7 @@ describe Admin::ProfilesController do
   # TODO: Make RESTful
   describe "successful POST to index" do
     it "redirects to profile page" do
+      Factory(:blog)
       request.session = { :user => users(:tobi).id }
       post :index, :user => {:email => 'foo@bar.com'}
       response.should render_template('index')

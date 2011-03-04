@@ -1,6 +1,7 @@
 class Admin::ProfilesController < Admin::BaseController
+  layout 'administration'
   helper Admin::UsersHelper
-  
+
   def index
     @user = current_user
     @profiles = Profile.find(:all, :order => 'id')

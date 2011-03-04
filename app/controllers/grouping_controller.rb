@@ -37,6 +37,8 @@ class GroupingController < ContentController
     set_noindex
     @grouping = grouping_class.find_by_permalink(params[:id])
 
+    return render_empty if @grouping.nil?
+
     @page_title = "#{_(self.class.to_s.sub(/Controller$/,'').singularize)} #{@grouping.name}, "
 
     if @grouping.respond_to? :description and
@@ -77,7 +79,7 @@ class GroupingController < ContentController
   def render_index(groupings)
     respond_to do |format|
       format.html do
-        unless template_exists?
+        unless template_exists? "#{self.class.to_s.sub(/Controller$/,'').downcase}/index"
           @grouping_class = self.class.grouping_class
           @groupings = groupings
           render :template => 'articles/groupings'
@@ -94,7 +96,7 @@ class GroupingController < ContentController
           return
         end
 
-        render :template => 'articles/index' unless template_exists?
+        render :template => 'articles/index' unless template_exists? 'show'
       end
 
       format.atom { render_feed 'atom_feed',  @articles }
@@ -104,20 +106,19 @@ class GroupingController < ContentController
 
   def render_feed(template, collection)
     articles = collection[0,this_blog.limit_rss_display]
-    render :partial => template.sub(%r{^(?:articles/)?}, 'articles/'), :object => articles
+    render :partial => template.sub(%r{^(?:articles/)?}, 'articles/'), :locals => { :items => articles }
   end
-  
+
+  def render_empty
+    @articles = []
+    render_articles
+  end
+
   private
   def set_noindex
     # irk there must be a better way to do this
     @noindex = 1 if (grouping_class.to_s.downcase == "tag" and this_blog.index_tags == false)
     @noindex = 1 if (grouping_class.to_s.downcase == "category" and this_blog.index_categories == false)
     @noindex = 1 unless params[:page].blank?
-  end
-
-  def template_exists?(path = default_template_name)
-    self.view_paths.find_template(path, response.template.template_format)
-  rescue ActionView::MissingTemplate
-    false
   end
 end

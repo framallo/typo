@@ -1,16 +1,14 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
-require 'flickr_mock'
-
+# TODO: Move elsewhere. TextfilterController is a dummy.
 describe TextfilterController do
   before do
-    reset_whiteboard
-
-    get :test_action # set up @url; In Rails 1.0, we can't do url_for without it.
+    @blog = Factory(:blog)
+    @whiteboard = Hash.new
   end
 
   def blog
-    blogs(:default)
+    @blog
   end
 
   def filter_text(text, filters, filterparams={})
@@ -18,11 +16,7 @@ describe TextfilterController do
   end
 
   def whiteboard
-    @whiteboard ||= Hash.new
-  end
-
-  def reset_whiteboard
-    @whiteboard = nil
+    @whiteboard
   end
 
   it "test_unknown" do
@@ -78,7 +72,7 @@ describe TextfilterController do
   end
 
   describe 'code textfilter' do
-    
+
     describe 'single line' do
 
       it 'should made nothin if no args' do
@@ -188,5 +182,23 @@ EOF
       filter_text('<typo:lightbox img="31366117" caption=""/>',
         [:macropre,:macropost],
         {})
+  end
+
+  describe "combining a post-macro" do
+    describe "with markdown" do
+      it "correctly interprets the macro" do
+        result = filter_text('<typo:flickr img="31366117" size="Square" style="float:left"/>',
+                             [:macropre, :markdown, :macropost])
+        result.should =~ %r{<div style="float:left" class="flickrplugin"><a href="http://www.flickr.com/users/scottlaird/31366117"><img src="http://photos23.flickr.com/31366117_b1a791d68e_s.jpg" width="75" height="75" alt="Matz" title="Matz"/></a><p class="caption" style="width:75px">This is Matz, Ruby's creator</p></div>}
+      end
+    end
+
+    describe "with markdown" do
+      it "correctly interprets the macro" do
+        result = filter_text('<typo:flickr img="31366117" size="Square" style="float:left"/>',
+                             [:macropre, :textile, :macropost])
+        result.should == "<div style=\"float:left\" class=\"flickrplugin\"><a href=\"http://www.flickr.com/users/scottlaird/31366117\"><img src=\"http://photos23.flickr.com/31366117_b1a791d68e_s.jpg\" width=\"75\" height=\"75\" alt=\"Matz\" title=\"Matz\"/></a><p class=\"caption\" style=\"width:75px\">This is Matz, Ruby's creator</p></div>"
+      end
+    end
   end
 end

@@ -1,6 +1,6 @@
   <% @page_heading = _('Users') %>
 
-  <% content_for('tasks') do %>
+  <% content_for(:tasks) do %>
     <%= task_overview %>
   <% end %>
 
@@ -8,7 +8,7 @@
   <br/>
 
 
-  <% form_tag do %>
+  <%= form_tag do %>
   <%= hidden_field "user", "id" %>
   <%= confirm_delete(_("Yes") + "...") %>
   <% end %>

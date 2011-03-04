@@ -1,8 +1,9 @@
-require File.dirname(__FILE__) + '/../spec_helper'
+require 'spec_helper'
 
 describe Trackback, 'With the various trackback filters loaded and DNS mocked out appropriately' do
   before(:each) do
     IPSocket.stub!(:getaddress).and_return { raise SocketError.new("getaddrinfo: Name or service not known") }
+    Factory(:blog)
     @blog = Blog.default
     @blog.sp_global = true
     @blog.default_moderate_comments = false
@@ -10,12 +11,12 @@ describe Trackback, 'With the various trackback filters loaded and DNS mocked ou
   end
 
   it 'Incomplete trackbacks should not be accepted' do
-    tb = Trackback.new(:blog_name => 'Blog name', 
-                       :title => 'Title', 
+    tb = Trackback.new(:blog_name => 'Blog name',
+                       :title => 'Title',
                        :excerpt => 'Excerpt',
-                       :article_id => contents(:article1).id)
+                       :article_id => Factory(:article).id)
     tb.should_not be_valid
-    tb.errors.should be_invalid('url')
+    tb.errors['url'].should be_any
 
     tb.url = 'http://foo.com'
     tb.should be_valid

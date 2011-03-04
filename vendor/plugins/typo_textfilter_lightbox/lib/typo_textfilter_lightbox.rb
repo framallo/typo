@@ -1,5 +1,4 @@
 require 'net/http'
-require 'flickr'
 
 class Typo
   class Textfilter
@@ -76,9 +75,9 @@ Common attributes:
           thumbsize     = attrib['thumbsize'] || "square"
           displaysize   = attrib['displaysize'] || "original"
 
-          flickr = ::Flickr.new(FLICKR_KEY)
-          flickrimage = ::Flickr::Photo.new(img)
-          sizes = flickrimage.sizes
+          FlickRaw.api_key = FLICKR_KEY
+          flickrimage = flickr.photos.getInfo(:photo_id => img)
+          sizes = flickr.photos.getSizes(:photo_id => img)
 
           thumbdetails = sizes.find {|s| s['label'].downcase == thumbsize.downcase } || sizes.first
           displaydetails = sizes.find {|s| s['label'].downcase == displaysize.downcase } || sizes.first

@@ -1,3 +1,4 @@
+# coding: utf-8
 require 'uri'
 require 'net/http'
 
@@ -6,7 +7,18 @@ class Article < Content
 
   content_fields :body, :extended
 
+  validates_uniqueness_of :guid
+  validates_presence_of :title
+
+  belongs_to :user
+
   has_many :pings,      :dependent => :destroy, :order => "created_at ASC"
+  has_many :trackbacks, :dependent => :destroy, :order => "created_at ASC"
+  has_many :feedback, :order => "created_at DESC"
+  has_many :resources, :order => "created_at DESC", :dependent => :nullify
+  has_many :categorizations
+  has_many :categories, :through => :categorizations
+  has_many :triggers, :as => :pending_item
 
   has_many :comments,   :dependent => :destroy, :order => "created_at ASC" do
 
@@ -28,39 +40,23 @@ class Article < Content
     this.has_many :published_feedback,   :class_name => "Feedback", :order => "created_at ASC"
   end
 
-  has_many :trackbacks, :dependent => :destroy, :order => "created_at ASC"
+  has_and_belongs_to_many :tags
 
-  #TODO: change it because more logical with s in end : feedbacks
-  has_many :feedback, :order => "created_at DESC"
+  before_create :set_defaults, :create_guid
+  after_create :add_notifications
+  before_save :set_published_at
+  after_save :post_trigger
+  after_save :keywords_to_tags
 
-  has_many :resources, :order => "created_at DESC",
-           :class_name => "Resource", :foreign_key => 'article_id'
-  after_destroy :fix_resources
-
-  has_many :categorizations
-  has_many :categories, \
-    :through => :categorizations, \
-    :include => :categorizations, \
-    :select => 'categories.*', \
-    :uniq => true, \
-    :order => 'categorizations.is_primary DESC'
-    
-  has_and_belongs_to_many :tags, :foreign_key => 'article_id'
-
-  named_scope :category, lambda {|category_id| {:conditions => ['categorizations.category_id = ?', category_id], :include => 'categorizations'}}
-  named_scope :drafts, :conditions => ['state = ?', 'draft']
-  named_scope :without_parent, {:conditions => {:parent_id => nil}}
-  named_scope :child_of, lambda { |article_id| {:conditions => {:parent_id => article_id}} }
+  scope :category, lambda {|category_id| {:conditions => ['categorizations.category_id = ?', category_id], :include => 'categorizations'}}
+  scope :drafts, :conditions => ['state = ?', 'draft']
+  scope :without_parent, {:conditions => {:parent_id => nil}}
+  scope :child_of, lambda { |article_id| {:conditions => {:parent_id => article_id}} }
 
   def has_child?
     Article.exists?({:parent_id => self.id})
   end
 
-  belongs_to :user
-
-  has_many :triggers, :as => :pending_item
-  after_save :post_trigger
-  
   attr_accessor :draft, :keywords
 
   has_state(:state,
@@ -70,9 +66,8 @@ class Article < Content
             :initial_state =>  :new,
             :handles       => [:withdraw,
                                :post_trigger,
-                               :after_save, :send_pings, :send_notifications,
+                               :send_pings, :send_notifications,
                                :published_at=, :just_published?])
-
 
   include Article::States
 
@@ -124,7 +119,7 @@ class Article < Content
   }
 
   def stripped_title
-    CGI.escape(self.title.tr(FROM, TO).gsub(/<[^>]*>/, '').to_url)
+    self.title.tr(FROM, TO).gsub(/<[^>]*>/, '').to_url
   end
 
   def year_url
@@ -140,7 +135,7 @@ class Article < Content
   end
 
   def title_url
-    permalink.to_s
+    URI.encode(permalink.to_s)
   end
 
   def permalink_url_options(nesting = false)
@@ -165,10 +160,10 @@ class Article < Content
 
   def param_array
     @param_array ||=
-      returning([published_at.year,
+      [published_at.year,
                  sprintf('%.2d', published_at.month),
                  sprintf('%.2d', published_at.day),
-                 permalink]) \
+                 permalink].tap \
       do |params|
         this = self
         k = class << params; self; end
@@ -221,7 +216,7 @@ class Article < Content
     urls = Array.new
     html.gsub(/<a\s+[^>]*>/) do |tag|
       if(tag =~ /\bhref=(["']?)([^ >"]+)\1/)
-        urls.push($2)
+        urls.push($2.strip)
       end
     end
 
@@ -233,14 +228,16 @@ class Article < Content
 
     articleurl ||= permalink_url(nil)
 
-    weblogupdatesping_urls = blog.ping_urls.gsub(/ +/,'').split(/[\n\r]+/)
+    weblogupdatesping_urls = blog.ping_urls.gsub(/ +/,'').split(/[\n\r]+/).map(&:strip)
     pingback_or_trackback_urls = self.html_urls
 
     ping_urls = weblogupdatesping_urls + pingback_or_trackback_urls
 
+    existing_ping_urls = pings.collect { |p| p.url }
+
     ping_urls.uniq.each do |url|
       begin
-        unless pings.collect { |p| p.url }.include?(url.strip)
+        unless existing_ping_urls.include?(url)
           ping = pings.build("url" => url)
 
           if weblogupdatesping_urls.include?(url)
@@ -285,17 +282,23 @@ class Article < Content
   # params is a Hash
   def self.find_by_permalink(params)
     date_range = self.time_delta(params[:year], params[:month], params[:day])
-    req_params = {}
-    if params[:title]
-      req_params[:permalink] = params[:title]
-    end
 
-    if date_range
-      req_params[:published_at] = date_range
-    end
+    req_params = {}
+    req_params[:permalink] = params[:title] if params[:title]
+    req_params[:published_at] = date_range if date_range
+
     return nil if req_params.empty? # no search if no params send
 
-    find_published(:first, :conditions => req_params) or raise ActiveRecord::RecordNotFound
+    article = find_published(:first, :conditions => req_params)
+    return article if article
+
+    if params[:title]
+      req_params[:permalink] = CGI.escape(params[:title])
+      article = find_published(:first, :conditions => req_params)
+      return article if article
+    end
+
+    raise ActiveRecord::RecordNotFound
   end
 
   def self.find_by_params_hash(params = {})
@@ -318,16 +321,17 @@ class Article < Content
   def keywords_to_tags
     Article.transaction do
       tags.clear
+      tags <<
       keywords.to_s.scan(/((['"]).*?\2|[\.\w]+)/).collect do |x|
         x.first.tr("\"'", '')
-      end.uniq.each do |tagword|
-        tags << Tag.get(tagword)
+      end.uniq.map do |tagword|
+        Tag.get(tagword)
       end
     end
   end
 
   def interested_users
-    User.find_boolean(:all, :notify_on_new_articles)
+    User.find_all_by_notify_on_new_articles(true)
   end
 
   def notify_user_via_email(user)
@@ -358,9 +362,9 @@ class Article < Content
     state.published = cast_to_boolean(newval)
   end
 
-  # Bloody rails reloading. Nasty workaround.
+  # FIXME: Bloody rails reloading. Nasty workaround.
   def allow_comments=(newval)
-    returning(cast_to_boolean(newval)) do |val|
+    cast_to_boolean(newval).tap do |val|
       if self[:allow_comments] != val
         changed if published?
         self[:allow_comments] = val
@@ -369,7 +373,7 @@ class Article < Content
   end
 
   def allow_pings=(newval)
-    returning(cast_to_boolean(newval)) do |val|
+    cast_to_boolean(newval).tap do |val|
       if self[:allow_pings] != val
         changed if published?
         self[:allow_pings] = val
@@ -485,18 +489,12 @@ class Article < Content
       end
     end
   end
-
+  
   def atom_content(entry)
-    if self.user && self.user.name
-      rss_desc = "<hr /><p><small>#{_('Original article writen by')} #{self.user.name} #{_('and published on')} <a href='#{blog.base_url}'>#{blog.blog_name}</a> | <a href='#{self.permalink_url}'>#{_('direct link to this article')}</a> | #{_('If you are reading this article elsewhere than')} <a href='#{blog.base_url}'>#{blog.blog_name}</a>, #{_('it has been illegally reproduced and without proper authorization')}.</small></p>"
-    else
-      rss_desc = ""
-    end
-
-    post = blog.show_extended_on_rss ? post = html(:all) : post = html(:body) 
+    post = blog.show_extended_on_rss ? post = html(:all) : post = html(:body)
     post = "<p>This article is password protected. Please <a href='#{permalink_url}'>fill in your password</a> to read it</p>" unless password.nil? or password.empty?
-    
-    content = blog.rss_description ? post + rss_desc : post
+
+    content = blog.rss_description ? post + get_rss_description : post
     entry.content(content, :type => "html")
   end
 
@@ -513,11 +511,6 @@ class Article < Content
   end
 
   protected
-
-  before_create :set_defaults, :create_guid
-  before_save :set_published_at
-  after_save :keywords_to_tags
-  after_create :add_notifications
 
   def set_published_at
     if self.published and self[:published_at].nil?
@@ -545,31 +538,19 @@ class Article < Content
   end
 
   def add_notifications
-    self.notify_users = User.find_boolean(:all, :notify_on_new_articles)
-    self.notify_users << self.user if (self.user.notify_watch_my_articles? rescue false)
-    self.notify_users.uniq!
+    users = interested_users
+    users << self.user if (self.user.notify_watch_my_articles? rescue false)
+    self.notify_users = users.uniq
   end
 
   def self.time_delta(year = nil, month = nil, day = nil)
     return nil if year.nil? && month.nil? && day.nil?
-    from = Time.mktime(year, month || 1, day || 1)
+    from = Time.utc(year, month || 1, day || 1)
 
     to = from.next_year
     to = from.next_month unless month.blank?
     to = from + 1.day unless day.blank?
     to = to - 1 # pull off 1 second so we don't overlap onto the next day
     return from..to
-  end
-
-  validates_uniqueness_of :guid
-  validates_presence_of :title
-
-  private
-
-  def fix_resources
-    Resource.find(:all, :conditions => "article_id = #{id}").each do |fu|
-      fu.article_id = nil
-      fu.save
-    end
   end
 end
