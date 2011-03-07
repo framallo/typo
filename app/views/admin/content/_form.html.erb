@@ -49,27 +49,16 @@
   
     <%= render(:partial => 'images', :object => @images) unless @images.empty? %>
 
-    <ul id='editor-menu'>
-      <li id="f" class=" <%= 'active' if current_user.editor == 'visual' %>">
-        <%= build_editor_link("Visual", 'insert_editor', 'fck', 'visual_editor', 'visual') %>
-      </li>
-      <li id="s" class=" <%= 'active' if current_user.editor == 'simple' %>">
-        <%= build_editor_link("HTML", 'insert_editor', 'simple', 'simple_editor', 'simple') %>
-      </li>
-    </ul>
-
     <div id="editor" class='ui-accordion-content ui-helper-reset ui-widget-content ui-corner-bottom ui-accordion-content-active'>
-      <div id='quicktags' style='<%= "display: none;" if current_user.editor == 'visual' %>'>
+      <div id='quicktags' style='display: none;' >
         <script type="text/javascript">edToolbar('article_body_and_extended');</script>
       </div>
     
-      <div id ='visual_editor' <%= "style='display: none;'" if current_user.editor == 'simple'%> >
-        <%= ckeditor_textarea('article', 'body_and_extended', {:class => 'large', :height => '300px', :rows => '20'}) if current_user.editor == 'visual' %>
+      <div id ='visual_editor' >
+        <%= ckeditor_textarea('article', 'body_and_extended', {:class => 'large', :height => '300px', :rows => '20'}) %>
       </div>
       
-      <div id='simple_editor' class='input_text' <%= "style='display: none;'" if current_user.editor == 'visual'%> >
-        <%= text_area('article', 'body_and_extended', {:class => 'large', :height => '300px', :rows => '20'}) if current_user.editor == 'simple' %>
-        <%= render_macros(@macros) if current_user.editor == 'simple' %>  
+      <div id='simple_editor' class='input_text' style='display: none;'>
       </div>
     </div>
 
