@@ -20,5 +20,4 @@ gem "activemerchant", "1.9.3", :require => "active_merchant"
 
 group :development do
   gem 'ruby-debug'
-  gem 'sqlite3-ruby', :require => 'sqlite3'
 end
