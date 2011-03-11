@@ -1,4 +1,5 @@
 begin
+  require 'thread'
   require "rubygems"
   require "bundler"
 rescue LoadError
